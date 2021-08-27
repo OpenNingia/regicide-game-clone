@@ -8,6 +8,12 @@ export default class Lobby extends Phaser.Scene {
         });
     }
 
+
+    init(data) {
+        console.log(`init lobby scene. ${data}`);
+        this.socket = data.socket;
+    }
+
     preload() {
     }
 
@@ -18,40 +24,22 @@ export default class Lobby extends Phaser.Scene {
         this.players = [];
         this.playerSlots = [];
 
-        this.scale.startFullscreen();
-
         this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
 
         /** SOCKET CODE */
-
-        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
-            // dev code
-            this.socket = io('http://localhost:3000');
-        } else {
-            // production code
-            this.socket = io('/');
-        }        
-
-        this.socket.on('connect', function () {
-        	console.log('Connected!');
-            self.me = null;
-            self.players = [];
-
-            self.playerSlots.forEach(x=>x.destroy());
-            self.playerSlots = [];
-        });
+        this.socket.emit('playerJoin');
 
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
             self.players = playerList.map(x => new Player(x.playerId, x.playerName));
-            console.log(self.players);
+            console.log(`players: ${self.players}`);
 
             if (self.me === null) {
                 // this is me!
                 self.me = self.players.find(x => x.playerId == playerId);
-                console.log("I joined the server! My Id is: " + playerId + " and my name is: " + playerName);
+                console.log(`I joined the server! My Id is: ${playerId} and my name is: ${playerName}`);
             } else {
-                console.log('Joined player: ' + playerId + ' as ' + playerName);
+                console.log(`Joined player: ${playerId} as ${playerName}`);
             }
 
             let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
@@ -67,13 +55,17 @@ export default class Lobby extends Phaser.Scene {
 
             self.playerSlots.push(self.me.render(self, 10, 750));
 
-            if ( self.players.length == 4 ) {
+            /*
+            if ( self.players.length == 4 ) {                
                 // lobby completed, go to game
                 self.scene.start('Game', { socket: self.socket, players: self.players, me: self.me });
-            }
-        })
+            }*/
+        });
 
-
+        this.socket.on('roomFull', function (roomName) {
+            console.log(`Room ${roomName} is full, let's start`);
+            // lobby completed, go to game
+            self.scene.start('Game', { socket: self.socket, players: self.players, me: self.me });
+        });
     }
-
 }
