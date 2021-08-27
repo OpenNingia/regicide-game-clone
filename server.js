@@ -602,7 +602,7 @@ io.on('connection', function (socket) {
                 console.log('discard pile', room.discard_pile);
             }
 
-            if ( this.castle_deck.length === 0 ) {
+            if ( room.castle_deck.length === 0 ) {
                 // YOU WIN!!!
                 room.sendGameOver(true);              
                 room.resetGameInfo();
