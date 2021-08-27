@@ -493,7 +493,7 @@ io.on('connection', function (socket) {
         // STEP 4 suffer damage
         let damage_suffered = getCardAttackValue(game_info.current_monster);
         if (apply_shield) {
-            game_info.current_shield = getCardsAttackValue(cards);
+            game_info.current_shield += getCardsAttackValue(cards);
             damage_suffered = Math.max(0, damage_suffered - game_info.current_shield);
         }
 

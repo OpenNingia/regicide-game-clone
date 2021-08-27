@@ -101,6 +101,13 @@ export default class Game extends Phaser.Scene {
         this.damageText = this.add.text(75, 650, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
             .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(false);
 
+        // castle deck
+        // discard pile
+        // tavern deck
+        this.deckText = this.add.text(1100, 50, ['', '', ''])
+            .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(true);
+
+
         this.zone = new Zone(this);
         this.dropZone = this.zone.renderZone();
         this.dropZone.data.values.cards = [];
@@ -188,6 +195,9 @@ export default class Game extends Phaser.Scene {
             const hpDmgString = `HP ${remainingHp}/${gameInfo.current_monster_hp} | DMG ${remainingDmg}/${gameInfo.current_monster_attack}`;
             let hpDmgTextObj = self.add.text((self.castleZoneObj.x), (self.castleZoneObj.y+100), [hpDmgString]).setFontSize(14).setFontFamily('Trebuchet MS').setColor('#00ffff');
             self.castleZoneObj.data.values.objects.push(hpDmgTextObj);
+
+            // update decks
+            self.deckText.setText([`TAVERNA (${gameInfo.tavern_deck_size})`, `SCARTI (${gameInfo.discard_pile_size})`, `CASTELLO (${gameInfo.castle_deck_size})`])
 
             //
 
@@ -292,11 +302,6 @@ export default class Game extends Phaser.Scene {
         // 1, 14, 27, 40
         let familiars = cards.filter(x=>x===1||x===14||x===27||x===40);
         let not_familiars = cards.filter(x=>x!==1&&x!==14&&x!==27&&x!==40);
-        /*let tmp = cards.slice(0);
-        if (cards.indexOf(1) >= 0)  { familiars++; }
-        if (cards.indexOf(14) >= 0) { familiars++; }
-        if (cards.indexOf(27) >= 0) { familiars++; }
-        if (cards.indexOf(40) >= 0) { familiars++; }*/
 
         // there can be at most one familiar
         if (familiars.length > 1) {
@@ -304,11 +309,8 @@ export default class Game extends Phaser.Scene {
         }
 
         let values = not_familiars.map(x=>x % 13);
-        let all_different_from_zero_and_less_than_5 = values.every(x=>x!=0&&x<=5);
-
-        if ( !all_different_from_zero_and_less_than_5 ) {
-            return false;
-        }
+        // 0 == 13
+        values = values.map(x=>x == 0 ? 13 : x);
 
         // then we can play two or more cards
         // if they are the same

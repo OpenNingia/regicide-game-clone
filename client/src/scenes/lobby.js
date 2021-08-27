@@ -18,11 +18,19 @@ export default class Lobby extends Phaser.Scene {
         this.players = [];
         this.playerSlots = [];
 
+        this.scale.startFullscreen();
+
         this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
 
         /** SOCKET CODE */
 
-		this.socket = io('/');
+        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+            // dev code
+            this.socket = io('http://localhost:3000');
+        } else {
+            // production code
+            this.socket = io('/');
+        }        
 
         this.socket.on('connect', function () {
         	console.log('Connected!');
