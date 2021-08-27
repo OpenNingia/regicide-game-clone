@@ -8,12 +8,13 @@ export default class Boot extends Phaser.Scene {
     }
 
     preload() {
+        
     }
 
     create() {
         let self = this;
 
-        this.dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff');
+        this.dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
 
         /** SOCKET CODE */
 

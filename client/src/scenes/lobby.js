@@ -23,7 +23,7 @@ export default class Lobby extends Phaser.Scene {
         this.me = null;
         this.players = [];
 
-        this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
+        this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
 
         /** SOCKET CODE */        
         this.socket.off('playerJoin');

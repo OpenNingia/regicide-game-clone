@@ -96,20 +96,20 @@ export default class Game extends Phaser.Scene {
         let self = this;
 
         this.playerSlots = [];
-        this.dealText = this.add.text(75, 275, ['[NUOVA PARTITA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
-        this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setVisible(false);
-        this.playCardsText = this.add.text(600, 650, ['[GIOCA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
-        this.passTurnText = this.add.text(690, 650, ['[PASSA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
-        this.damageText = this.add.text(75, 650, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
-            .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(false);
+        this.dealText = this.add.text(75, 275, ['[NUOVA]', '[PARTITA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
+        this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
+        this.playCardsText = this.add.text(530, 650, ['[GIOCA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
+        this.passTurnText = this.add.text(690, 650, ['[PASSA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
+        this.damageText = this.add.text(75, 580, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
+            .setFontSize(24).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(false);
 
         // castle deck
         // discard pile
         // tavern deck
         this.deckLabel = this.add.text(1050, 70, ['TAVERNA', 'SCARTI', 'CASTELLO'])
-            .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(true);
+            .setFontSize(16).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(true);
         this.deckText = this.add.text(1130, 70, ['', '', ''])
-            .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(true);
+            .setFontSize(16).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(true);
 
 
         this.zone = new Zone(this);
@@ -206,7 +206,7 @@ export default class Game extends Phaser.Scene {
             let remainingDmg = gameInfo.current_monster_attack-gameInfo.current_shield;
 
             const hpDmgString = `HP ${remainingHp}/${gameInfo.current_monster_hp} | DMG ${remainingDmg}/${gameInfo.current_monster_attack}`;
-            let hpDmgTextObj = self.add.text((self.castleZoneObj.x), (self.castleZoneObj.y+100), [hpDmgString]).setFontSize(14).setFontFamily('Trebuchet MS').setColor('#00ffff');
+            let hpDmgTextObj = self.add.text((self.castleZoneObj.x), (self.castleZoneObj.y+100), [hpDmgString]).setFontSize(16).setFontFamily('CompassPro').setColor('#00ffff');
             self.castleZoneObj.data.values.objects.push(hpDmgTextObj);
 
             // update decks
@@ -227,13 +227,13 @@ export default class Game extends Phaser.Scene {
                 if ( gameInfo.current_player_damage === 0 ) {
                     self.yourTurnText.setVisible(true);
                     self.playCardsText.setVisible(true);
-                    self.passTurnText.setVisible(true).setInteractive().setColor('#00ffff');
+                    self.passTurnText.setInteractive().setColor('#00ffff').setVisible(true);
                     self.setHandInteractive(true);
                 } else {
                     self.damageText.setText(['HAI SUBITO DANNI!', `SCARTA ${gameInfo.current_player_damage}`, 'PER CONTINUARE']);
                     self.damageText.setVisible(true);
                     self.playCardsText.setVisible(true);
-                    self.passTurnText.setVisible(true).disableInteractive().setColor('#eee');
+                    self.passTurnText.disableInteractive().setColor('#eee').setVisible(true);
                     self.setHandInteractive(true);
                 }
             }
