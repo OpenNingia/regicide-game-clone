@@ -22,12 +22,12 @@ export default class Lobby extends Phaser.Scene {
 
         this.me = null;
         this.players = [];
-        this.playerSlots = [];
 
         this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
 
-        /** SOCKET CODE */
-        this.socket.emit('playerJoin');
+        /** SOCKET CODE */        
+        this.socket.off('playerJoin');
+        this.socket.off('roomFull');
 
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
@@ -42,24 +42,8 @@ export default class Lobby extends Phaser.Scene {
                 console.log(`Joined player: ${playerId} as ${playerName}`);
             }
 
-            let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
-
-            self.playerSlots.forEach(x=>x.destroy());
-
-            let xx = [75, 375, 675];
-            let ii = 0;
-            otherPlayers.forEach(x=>{
-                let my_xx = xx[ii++];
-                self.playerSlots.push(x.render(self, my_xx, 70));
-            });
-
-            self.playerSlots.push(self.me.render(self, 10, 750));
-
-            /*
-            if ( self.players.length == 4 ) {                
-                // lobby completed, go to game
-                self.scene.start('Game', { socket: self.socket, players: self.players, me: self.me });
-            }*/
+            let playerNames = self.players.map(x=>`> ${x.playerName}`);
+            self.dealText.setText(['IN ATTESA DI GIOCATORI...'].concat(playerNames));
         });
 
         this.socket.on('roomFull', function (roomName) {
@@ -67,5 +51,7 @@ export default class Lobby extends Phaser.Scene {
             // lobby completed, go to game
             self.scene.start('Game', { socket: self.socket, players: self.players, me: self.me });
         });
+
+        this.socket.emit('playerJoin');
     }
 }

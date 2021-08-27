@@ -48,6 +48,53 @@ class GameInfo {
 
 // FREE FUNCTIONS //
 
+function isValidPlay(cards) {
+    if (cards.length == 0) {
+        return true;
+    }
+    if (cards.length == 1) {
+        return true;
+    }
+
+    // the jolly needs to be played alone
+    if (cards.indexOf(53) >= 0 || cards.indexOf(54) >= 0) {
+        return false;
+    }
+
+    // to play more than one card you need special rules
+    // first of all check familiars
+
+    // 1, 14, 27, 40
+    let familiars = cards.filter(x=>x===1||x===14||x===27||x===40);
+    let not_familiars = cards.filter(x=>x!==1&&x!==14&&x!==27&&x!==40);
+
+    // there can be at most one familiar
+    if (familiars.length > 1) {
+        return false;
+    }
+
+    let values = not_familiars.map(x=>x % 13);
+    // 0 == 13
+    values = values.map(x => {
+        if ( x == 0 ) {
+            return 13;
+        }
+        return x;
+    });
+
+    // then we can play two or more cards
+    // if they are the same
+    // and their sum is equal or less than 10
+    let sum = values.reduce((a, b) => a + b, 0);
+    if ( sum > 10 ) {
+        return false;
+    }
+
+    const all_equals = values.every( v => v === values[0] );
+
+    return all_equals;
+}
+
 function getCardSeed(cardId) {
     if (cardId >= 1 && cardId <= 13) {
         return 'clubs';
@@ -195,6 +242,17 @@ class Room {
         return this.players.length >= 4;
     }
 
+    resetGameInfo() {
+        this.game_info = new GameInfo();
+        this.game_info.tavern_deck_size = this.deck.length;
+        this.game_info.castle_deck_size = this.castle_deck.size;
+        this.game_info.discard_pile_size = 0;        
+    }
+
+    setCurrentPlayer(playerId) {
+        this.game_info.current_player_id = playerId;
+    }
+
     sendPlayerHands() {
         // TODO. private messages
         io.to(this.name).emit('dealCards', this.players);
@@ -206,8 +264,13 @@ class Room {
         this.game_info.tavern_deck_size = this.deck.length;
         this.game_info.discard_pile_size = this.discard_pile.length;
     
-        io.to(this.name).emit('gameInfo', this.game_info);
-        console.log('E: gameInfo', this.game_info);
+        io.to(this.name).emit('gameInfo', this.game_info, this.players);
+        console.log('E: gameInfo', this.game_info, this.players);
+    }
+
+    sendGameOver(victory) {
+        io.to(this.name).emit('gameOver', victory);
+        console.log('E: gameOver', victory);
     }
 
     nextMonster() {
@@ -236,7 +299,7 @@ class Room {
         let nextIndex = (playerIdx+1) % this.players.length;
         console.log(`next index: ${nextIndex}`);
         let next = this.players[nextIndex];
-        this.game_info.current_player_id = next.playerId;
+        this.setCurrentPlayer(next.playerId);
         console.log(`next player id: ${this.game_info.current_player_id}`);
     }    
 }
@@ -290,6 +353,11 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('gameInfo', function () {
+        io.to(socket.id).emit('gameInfo', room.game_info, room.players);
+        console.log('E: gameInfo (requested)', socket.id, room.game_info, room.players);
+    });
+
     socket.on('dealCards', function (playerId) {
         console.log('R: dealCards');
 
@@ -309,13 +377,10 @@ io.on('connection', function (socket) {
             x.playerHand = hand;
         });
 
-        room.sendPlayerHands();
+        //room.sendPlayerHands();
 
-        room.game_info = new GameInfo();
-        room.game_info.tavern_deck_size = room.deck.length;
-        room.game_info.castle_deck_size = room.castle_deck.size;
-        room.game_info.discard_pile_size = 0;
-        room.game_info.current_player_id = playerId;
+        room.resetGameInfo();
+        room.setCurrentPlayer(playerId);
 
         // set the current monster
         room.nextMonster();
@@ -355,19 +420,27 @@ io.on('connection', function (socket) {
                 console.log('E: cardDiscarded', cardId, playerId);
             });  
 
-            room.sendPlayerHands();
+            //room.sendPlayerHands();
 
             if ( room.game_info.current_player_damage <= 0 ) {                
                 console.log("player soaked all the damage, next turn...");
                 room.nextPlayer();
+                room.sendGameInfo();
+            } else if (player.playerHand.length == 0) {                
+                room.sendGameOver(false);              
+                room.resetGameInfo();
+            } else {
+                room.sendGameInfo();
             }
-
-            // TODO send gameover
-                    
-            room.sendGameInfo();
             return;            
         }
 
+        if (!isValidPlay(cards)) {
+            // reject played cards
+            console.log('discard card since this is not a valid play/combo');
+            room.sendGameInfo();
+            return;            
+        }
 
         // STEP 1 (play a card)
         // when a card is played
@@ -390,8 +463,11 @@ io.on('connection', function (socket) {
 
             // remove immunity
             room.game_info.monster_has_immunity = false;
-            // the played will need to choose the next player
+            // TODO. the played will need to choose the next player
+            // for the moment we choose a random player
 
+            let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x=>x.playerId).slice(0));
+            room.setCurrentPlayer(nextPlayerId);
             room.sendGameInfo();
             return;
         }
@@ -537,7 +613,7 @@ io.on('connection', function (socket) {
         if (apply_shield) {
             room.game_info.current_shield += getCardsAttackValue(cards);            
         }
-        
+
         damage_suffered = Math.max(0, damage_suffered - room.game_info.current_shield);
 
         console.log("player should suffer damage: ", damage_suffered);

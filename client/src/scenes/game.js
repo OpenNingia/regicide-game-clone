@@ -95,6 +95,7 @@ export default class Game extends Phaser.Scene {
 
         let self = this;
 
+        this.playerSlots = [];
         this.dealText = this.add.text(75, 350, ['NUOVA PARTITA']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
         this.yourTurnText = this.add.text(75, 650, ['È IL TUO TURNO!']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setVisible(false);
         this.playCardsText = this.add.text(650, 700, ['CONFERMA']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
@@ -113,27 +114,20 @@ export default class Game extends Phaser.Scene {
         this.dropZone.data.values.cards = [];
 
         this.castleZone = new CastleZone(this);
-        this.castleZoneObj = this.castleZone.renderZone();        
+        this.castleZoneObj = this.castleZone.renderZone();
 
         this.outline = this.zone.renderOutline(this.dropZone);
         this.castleOutline = this.castleZone.renderOutline(this.castleZoneObj);
-
-        let xx = [75, 375, 675];
-        let ii = 0;
-        let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
-        otherPlayers.forEach(x=>{
-            let my_xx = xx[ii++];
-            x.render(self, my_xx, 70);
-        });        
-        this.me.render(self, 10, 750)
 
         /** SOCKET CODE */
 
         // remove listeners to avoid listening multiple time to the same events
         this.socket.off('dealCards');
+        this.socket.off('gameInfo');
+
         this.socket.off('cardPlayed');
         this.socket.off('cardDraw');
-        this.socket.off('gameInfo');
+
 
         // we receive also the event for the other players
         // this is not very cheat-proof :D
@@ -143,12 +137,28 @@ export default class Game extends Phaser.Scene {
             self.dealer.dealCards(players);
         })
 
-        this.socket.on('gameInfo', function (gameInfo) {
+        this.socket.on('gameInfo', function (gameInfo, players) {
 
-            console.log('Received gameInfo event', gameInfo);
+            console.log('Received gameInfo event', gameInfo, players);
+
+            self.dealer.dealCards(players);
 
             self.dropZone.data.values.cards.forEach(x=>x.destroy());
             self.dropZone.data.values.cards = [];
+
+            // update players
+            let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
+            self.playerSlots.forEach(x=>x.destroy());
+            self.playerSlots = [];
+
+            let xx = [75, 375, 675];
+            let ii = 0;
+            otherPlayers.forEach(x=>{
+                const my_xx = xx[ii++];
+                const is_current_player = gameInfo.current_player_id === x.playerId;
+                self.playerSlots.push(x.render(self, my_xx, 70, is_current_player));
+            });
+            self.playerSlots.push(self.me.render(self, 10, 750));
 
             // update board
             gameInfo.board.forEach(cardId => {
@@ -203,21 +213,21 @@ export default class Game extends Phaser.Scene {
 
             self.setHandInteractive(false);
             self.yourTurnText.setVisible(false);
-            self.playCardsText.setVisible(false);            
+            self.playCardsText.setVisible(false);
             self.damageText.setVisible(false);
 
             if (gameInfo.current_player_id == self.me.playerId) {
                 console.log("ITS MY TURN!!!");
-                
+
                 if ( gameInfo.current_player_damage === 0 ) {
                     self.yourTurnText.setVisible(true);
                     self.playCardsText.setVisible(true);
-                    self.setHandInteractive(true);   
+                    self.setHandInteractive(true);
                 } else {
                     self.damageText.setText(['HAI SUBITO DANNI!', `SCARTA ${gameInfo.current_player_damage}`, 'PER CONTINUARE']);
-                    self.damageText.setVisible(true); 
+                    self.damageText.setVisible(true);
                     self.playCardsText.setVisible(true);
-                    self.setHandInteractive(true); 
+                    self.setHandInteractive(true);
                 }
             }
         })
@@ -229,6 +239,14 @@ export default class Game extends Phaser.Scene {
         this.socket.on('cardDraw', function (cardId, playerId) {
             console.log('Received cardDraw event', cardId, playerId);
         })
+
+        this.socket.on('gameOver', function(youWin) {
+            if (youWin === true) {
+                self.scene.start('GameOver', { socket: self.socket, message: "VITTORIA!!!" });
+            } else {
+                self.scene.start('GameOver', { socket: self.socket, message: "SCONFITTA :(" });
+            }
+        });
 
         /** END SOCKET CODE */
 
@@ -244,7 +262,7 @@ export default class Game extends Phaser.Scene {
 
         this.playCardsText.on('pointerout', function () {
             self.playCardsText.setColor('#00ffff');
-        })        
+        })
 
 		this.dealText.on('pointerdown', function () {
             self.socket.emit("dealCards", self.me.playerId);
@@ -257,6 +275,9 @@ export default class Game extends Phaser.Scene {
         this.dealText.on('pointerout', function () {
             self.dealText.setColor('#00ffff');
         })
+
+        // request game information
+        this.socket.emit('gameInfo');
     }
 
     update() {
@@ -276,7 +297,7 @@ export default class Game extends Phaser.Scene {
     playCards() {
         if ( this.me !== null ) {
             let cards = this.me.gameObjects.filter(x=>x.selected === true).map(y=>y.cardId);
-            
+
             if (this.canPlayCards(cards)) {
                 this.socket.emit('cardPlayed', cards, this.me.playerId);
             }
@@ -284,45 +305,6 @@ export default class Game extends Phaser.Scene {
     }
 
     canPlayCards(cards) {
-        if (cards.length == 0) {
-            return false;
-        }
-        if (cards.length == 1) {
-            return true;
-        }
-
-        // the jolly needs to be played alone
-        if (cards.indexOf(53) >= 0 || cards.indexOf(54) >= 0) {
-            return false;
-        }
-
-        // to play more than one card you need special rules
-        // first of all check familiars        
-
-        // 1, 14, 27, 40
-        let familiars = cards.filter(x=>x===1||x===14||x===27||x===40);
-        let not_familiars = cards.filter(x=>x!==1&&x!==14&&x!==27&&x!==40);
-
-        // there can be at most one familiar
-        if (familiars.length > 1) {
-            return false;
-        }
-
-        let values = not_familiars.map(x=>x % 13);
-        // 0 == 13
-        values = values.map(x=>x == 0 ? 13 : x);
-
-        // then we can play two or more cards
-        // if they are the same
-        // and their sum is equal or less than 10
-        let sum = values.reduce((a, b) => a + b, 0);
-        if ( sum > 10 ) {
-            return false;
-        }
-
-        const allEqual = arr => arr.every( v => v === arr[0] )
-        let all_equals = allEqual(values);
-
-        return all_equals;
+        return true;
     }
 }

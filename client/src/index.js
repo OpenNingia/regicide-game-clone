@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import Boot from "./scenes/boot";
 import Lobby from "./scenes/lobby";
 import Game from "./scenes/game";
+import GameOver from "./scenes/gameover";
 
 const config = {
     type: Phaser.AUTO,
@@ -11,7 +12,8 @@ const config = {
     scene: [
         Boot,
         Lobby,
-        Game
+        Game,
+        GameOver
     ],
     scale: {
         mode: Phaser.Scale.FIT,
