@@ -246,7 +246,7 @@ class Room {
         this.game_info = new GameInfo();
         this.game_info.tavern_deck_size = this.deck.length;
         this.game_info.castle_deck_size = this.castle_deck.size;
-        this.game_info.discard_pile_size = 0;        
+        this.game_info.discard_pile_size = 0;
     }
 
     setCurrentPlayer(playerId) {
@@ -263,7 +263,7 @@ class Room {
         this.game_info.castle_deck_size = this.castle_deck.length;
         this.game_info.tavern_deck_size = this.deck.length;
         this.game_info.discard_pile_size = this.discard_pile.length;
-    
+
         io.to(this.name).emit('gameInfo', this.game_info, this.players);
         console.log('E: gameInfo', this.game_info, this.players);
     }
@@ -281,7 +281,7 @@ class Room {
         this.game_info.current_inflicted_damage = 0;
         this.game_info.current_monster_attack = getCardAttackValue(this.game_info.current_monster);
     }
-    
+
 
     logCurrentMonsterStatus() {
         let card_kind = getCardKind(this.game_info.current_monster);
@@ -290,7 +290,7 @@ class Room {
         console.log('current HP: ' + (this.game_info.current_monster_hp-this.game_info.current_inflicted_damage) + ' of ' + this.game_info.current_monster_hp);
         console.log('attack damage: ' + getCardAttackValue(this.game_info.current_monster));
     }
-    
+
     nextPlayer() {
         let player = this.players.find(x=>x.playerId===this.game_info.current_player_id);
         console.log(`current player id: ${this.game_info.current_player_id}`);
@@ -301,7 +301,7 @@ class Room {
         let next = this.players[nextIndex];
         this.setCurrentPlayer(next.playerId);
         console.log(`next player id: ${this.game_info.current_player_id}`);
-    }    
+    }
 }
 
 const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
@@ -314,7 +314,7 @@ function getFreeRoom() {
 }
 
 io.on('connection', function (socket) {
-    console.log('A user connected: ' + socket.id);    
+    console.log('A user connected: ' + socket.id);
 
     const room = getFreeRoom();
     if ( room === null ) {
@@ -414,38 +414,38 @@ io.on('connection', function (socket) {
             cards.forEach(cardId => {
                 player.playerHand = player.playerHand.filter(x => x !== cardId);
                 room.discard_pile.push(cardId);
-    
+
                 // we tell the client that a card was played
                 io.to(room.name).emit('cardDiscarded', cardId, playerId);
                 console.log('E: cardDiscarded', cardId, playerId);
-            });  
+            });
 
             //room.sendPlayerHands();
 
-            if ( room.game_info.current_player_damage <= 0 ) {                
+            if ( room.game_info.current_player_damage <= 0 ) {
                 console.log("player soaked all the damage, next turn...");
                 room.nextPlayer();
                 room.sendGameInfo();
-            } else if (player.playerHand.length == 0) {                
-                room.sendGameOver(false);              
+            } else if (player.playerHand.length == 0) {
+                room.sendGameOver(false);
                 room.resetGameInfo();
             } else {
                 room.sendGameInfo();
             }
-            return;            
+            return;
         }
 
         if (!isValidPlay(cards)) {
             // reject played cards
             console.log('discard card since this is not a valid play/combo');
             room.sendGameInfo();
-            return;            
+            return;
         }
 
         // STEP 1 (play a card)
         // when a card is played
         // is removed from the hand of the player
-        // and added to the board        
+        // and added to the board
         cards.forEach(cardId => {
             player.playerHand = player.playerHand.filter(x => x !== cardId);
             room.game_info.board.push(cardId);
@@ -602,8 +602,14 @@ io.on('connection', function (socket) {
                 console.log('discard pile', room.discard_pile);
             }
 
-            room.nextMonster();
-            room.sendGameInfo();
+            if ( this.castle_deck.length === 0 ) {
+                // YOU WIN!!!
+                room.sendGameOver(true);              
+                room.resetGameInfo();
+            } else {
+                room.nextMonster();
+                room.sendGameInfo();
+            }
 
             return;
         }
@@ -611,7 +617,7 @@ io.on('connection', function (socket) {
         // STEP 4 suffer damage
         let damage_suffered = getCardAttackValue(room.game_info.current_monster);
         if (apply_shield) {
-            room.game_info.current_shield += getCardsAttackValue(cards);            
+            room.game_info.current_shield += getCardsAttackValue(cards);
         }
 
         damage_suffered = Math.max(0, damage_suffered - room.game_info.current_shield);
@@ -619,7 +625,7 @@ io.on('connection', function (socket) {
         console.log("player should suffer damage: ", damage_suffered);
 
         if ( damage_suffered == 0 ) {
-            room.nextPlayer();            
+            room.nextPlayer();
         } else {
             room.game_info.current_player_damage = damage_suffered;
             //io.emit('sufferDamage', playerId, damage_suffered);
@@ -632,12 +638,12 @@ io.on('connection', function (socket) {
         console.log('User disconnecting: ', socket.id);
         console.log('It was on rooms: ', socket.rooms);
 
-        room.players = room.players.filter(player => player.playerId !== socket.id);        
+        room.players = room.players.filter(player => player.playerId !== socket.id);
         console.log(`room ${room.name} players.length: ${room.players.length}`);
     });
 
     socket.on('disconnect', function () {
-        console.log('A user disconnected: ' + socket.id);        
+        console.log('A user disconnected: ' + socket.id);
     });
 });
 
