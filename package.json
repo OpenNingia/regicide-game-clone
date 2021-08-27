@@ -4,7 +4,7 @@
   "description": "An implementation of the regicide game",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "cd client && npm run build && cd .. && nodemon server.js"
   },
   "author": "Daniele Simonetti",
   "license": "ISC",

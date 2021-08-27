@@ -1,4 +1,8 @@
-const server = require('express')();
+const PORT = process.env.PORT || 3000
+
+const path = require('path');
+const express = require('express');
+const server = express();
 const http = require('http').createServer(server);
 const io = require('socket.io')(http, {
     cors: {
@@ -549,6 +553,10 @@ io.on('connection', function (socket) {
     });
 });
 
-http.listen(3000, function () {
-    console.log('Server started!');
+// serve static files
+server.use(express.static(path.join(__dirname, './client/dist')));
+
+http.listen(PORT, function () {
+    console.log('Listening on port ', http.address().port);
 });
+
