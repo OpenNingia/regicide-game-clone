@@ -71,11 +71,7 @@ export default class Dealer {
             return sprites[cardId];
         }
 
-        this.dealCards = (players) => {
-            //let self = this;            
-
-            //let otherPlayers = scene.players.filter(player => player.playerId !== scene.me.playerId);
-            
+        this.dealCards = (players) => {           
             // clean everything
             scene.players.forEach(x=> {
                 x.gameObjects.forEach(y=>y.destroy())
@@ -86,9 +82,9 @@ export default class Dealer {
             scene.me.gameObjects = [];
 
             let cardsCoords = [
-                {x:75, y:125, sprite: 'card-back2'},
-                {x:375, y:125, sprite: 'card-back3'},
-                {x:675, y:125, sprite: 'card-back4'},
+                {x:40, y:100, sprite: 'card-back2'},
+                {x:340, y:100, sprite: 'card-back3'},
+                {x:640, y:100, sprite: 'card-back4'},
             ];
 
             let otherPlayerIndex = 0;
@@ -105,7 +101,7 @@ export default class Dealer {
                         let card = new Card(scene, cardId);
                         let cardSprite = sprites[cardId];                
                         scene.me.gameObjects.push(
-                            card.render(475 + (j * 100), 650, 0.6, true, cardSprite));
+                            card.render(475 + (j * 100), 550, 1.0, true, cardSprite));
                     }  
                 }
                 else {                            

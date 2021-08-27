@@ -96,16 +96,19 @@ export default class Game extends Phaser.Scene {
         let self = this;
 
         this.playerSlots = [];
-        this.dealText = this.add.text(75, 350, ['NUOVA PARTITA']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
-        this.yourTurnText = this.add.text(75, 650, ['È IL TUO TURNO!']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setVisible(false);
-        this.playCardsText = this.add.text(650, 700, ['CONFERMA']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
+        this.dealText = this.add.text(75, 275, ['[NUOVA PARTITA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive();
+        this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setVisible(false);
+        this.playCardsText = this.add.text(600, 650, ['[GIOCA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
+        this.passTurnText = this.add.text(690, 650, ['[PASSA]']).setFontSize(18).setFontFamily('Trebuchet MS').setColor('#00ffff').setInteractive().setVisible(false);
         this.damageText = this.add.text(75, 650, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
             .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(false);
 
         // castle deck
         // discard pile
         // tavern deck
-        this.deckText = this.add.text(1100, 50, ['', '', ''])
+        this.deckLabel = this.add.text(1050, 70, ['TAVERNA', 'SCARTI', 'CASTELLO'])
+            .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(true);
+        this.deckText = this.add.text(1130, 70, ['', '', ''])
             .setFontSize(16).setFontFamily('Trebuchet MS').setColor('#ff69b4').setVisible(true);
 
 
@@ -151,14 +154,14 @@ export default class Game extends Phaser.Scene {
             self.playerSlots.forEach(x=>x.destroy());
             self.playerSlots = [];
 
-            let xx = [75, 375, 675];
+            let xx = [30, 330, 630];
             let ii = 0;
             otherPlayers.forEach(x=>{
                 const my_xx = xx[ii++];
                 const is_current_player = gameInfo.current_player_id === x.playerId;
-                self.playerSlots.push(x.render(self, my_xx, 70, is_current_player));
+                self.playerSlots.push(x.render(self, my_xx, 30, is_current_player));
             });
-            self.playerSlots.push(self.me.render(self, 10, 750));
+            self.playerSlots.push(self.me.render(self, 30, 690));
 
             // update board
             gameInfo.board.forEach(cardId => {
@@ -191,7 +194,7 @@ export default class Game extends Phaser.Scene {
 
             let gameObject = card.render(
                 gameObjectX, gameObjectY,
-                0.8,
+                1.0,
                 false,
                 sprite);
 
@@ -207,13 +210,15 @@ export default class Game extends Phaser.Scene {
             self.castleZoneObj.data.values.objects.push(hpDmgTextObj);
 
             // update decks
-            self.deckText.setText([`TAVERNA (${gameInfo.tavern_deck_size})`, `SCARTI (${gameInfo.discard_pile_size})`, `CASTELLO (${gameInfo.castle_deck_size})`])
+            //self.deckText.setText([`TAVERNA   (${gameInfo.tavern_deck_size})`, `SCARTI      (${gameInfo.discard_pile_size})`, `CASTELLO (${gameInfo.castle_deck_size})`])
+            self.deckText.setText([`(${gameInfo.tavern_deck_size})`, `(${gameInfo.discard_pile_size})`, `(${gameInfo.castle_deck_size})`])
 
             //
 
             self.setHandInteractive(false);
             self.yourTurnText.setVisible(false);
             self.playCardsText.setVisible(false);
+            self.passTurnText.setVisible(false);
             self.damageText.setVisible(false);
 
             if (gameInfo.current_player_id == self.me.playerId) {
@@ -222,11 +227,13 @@ export default class Game extends Phaser.Scene {
                 if ( gameInfo.current_player_damage === 0 ) {
                     self.yourTurnText.setVisible(true);
                     self.playCardsText.setVisible(true);
+                    self.passTurnText.setVisible(true).setInteractive().setColor('#00ffff');
                     self.setHandInteractive(true);
                 } else {
                     self.damageText.setText(['HAI SUBITO DANNI!', `SCARTA ${gameInfo.current_player_damage}`, 'PER CONTINUARE']);
                     self.damageText.setVisible(true);
                     self.playCardsText.setVisible(true);
+                    self.passTurnText.setVisible(true).disableInteractive().setColor('#eee');
                     self.setHandInteractive(true);
                 }
             }
@@ -264,6 +271,18 @@ export default class Game extends Phaser.Scene {
             self.playCardsText.setColor('#00ffff');
         })
 
+		this.passTurnText.on('pointerdown', function () {
+            self.passTurn();
+        })
+
+        this.passTurnText.on('pointerover', function () {
+            self.passTurnText.setColor('#ff69b4');
+        })
+
+        this.passTurnText.on('pointerout', function () {
+            self.passTurnText.setColor('#00ffff');
+        })        
+
 		this.dealText.on('pointerdown', function () {
             self.socket.emit("dealCards", self.me.playerId);
         })
@@ -275,6 +294,23 @@ export default class Game extends Phaser.Scene {
         this.dealText.on('pointerout', function () {
             self.dealText.setColor('#00ffff');
         })
+
+        // mouse trail
+        this.mouse_trail = this.add.particles('fire').createEmitter({
+            x: 0,
+            y: 720,
+            speed: { min: 100, max: 200 },
+            angle: { min: -85, max: -95 },
+            scale: { start: 0, end: 0.5, ease: 'Back.easeOut' },
+            alpha: { start: 1, end: 0, ease: 'Quart.easeOut' },
+            blendMode: 'SCREEN',
+            lifespan: 1000
+        });
+        this.mouse_trail.reserve(1000);        
+
+        this.input.on('pointermove', function (pointer) {
+            self.mouse_trail.setPosition(pointer.x, pointer.y);
+        });        
 
         // request game information
         this.socket.emit('gameInfo');
@@ -303,6 +339,12 @@ export default class Game extends Phaser.Scene {
             }
         }
     }
+
+    passTurn() {
+        if ( this.me !== null ) {
+            this.socket.emit('cardPlayed', [], this.me.playerId);
+        }
+    }    
 
     canPlayCards(cards) {
         return true;

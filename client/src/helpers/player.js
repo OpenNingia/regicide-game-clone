@@ -13,7 +13,7 @@ export default class Player {
 
             self.playerText = scene.add
                 .text(x, y, [text])
-                .setFontSize(12)
+                .setFontSize(14)
                 .setFontFamily('Trebuchet MS')
                 .setColor('#eeffff')
                 .setInteractive();

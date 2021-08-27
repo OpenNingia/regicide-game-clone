@@ -8,7 +8,8 @@ const config = {
     type: Phaser.AUTO,
     parent: "regicide_game",
     width: 1280,
-    height: 780,
+    height: 720,
+    pixelArt: true,
     scene: [
         Boot,
         Lobby,
@@ -16,10 +17,11 @@ const config = {
         GameOver
     ],
     scale: {
+        //mode: Phaser.Scale.HEIGHT_CONTROLS_WIDTH,
         mode: Phaser.Scale.FIT,
         parent: "regicide_game",
         width: 1280,
-        height: 780,
+        height: 720,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },        
 };
