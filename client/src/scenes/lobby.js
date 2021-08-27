@@ -1,5 +1,6 @@
 import Player from '../helpers/player';
 import io from 'socket.io-client';
+import { setupBackground } from '../helpers/util';
 
 export default class Lobby extends Phaser.Scene {
     constructor() {
@@ -19,6 +20,8 @@ export default class Lobby extends Phaser.Scene {
 
     create() {
         let self = this;
+
+        setupBackground(this);
 
         this.me = null;
         this.players = [];
