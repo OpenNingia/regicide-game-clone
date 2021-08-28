@@ -141,7 +141,7 @@ export default class Game extends Phaser.Scene {
         })   
 
 		this.socket.on('shuffleCards', function () {
-            console.log('Received shuffleCards event');            
+            console.log('Received shuffleCards event');
             self.card_shuffle_sfx.play({ rate: 2 });
         })
 
@@ -258,33 +258,15 @@ export default class Game extends Phaser.Scene {
 
         this.socket.on('gameOver', function(youWin) {
             if (youWin === true) {
-                self.scene.start('GameOver', { socket: self.socket, message: "VITTORIA!!!" });
+                self.scene.start('GameOver', { socket: self.socket, players: self.players, me: self.me, message: "VITTORIA!!!" });
             } else {
-                self.scene.start('GameOver', { socket: self.socket, message: "SCONFITTA :(" });
+                self.scene.start('GameOver', { socket: self.socket, players: self.players, me: self.me, message: "SCONFITTA :(" });
             }
         });
 
         /** END SOCKET CODE */
 
         this.dealer = new Dealer(this);
-
-        // mouse trail
-        /*
-        this.mouse_trail = this.add.particles('fire').createEmitter({
-            x: 0,
-            y: 720,
-            speed: { min: 100, max: 200 },
-            angle: { min: -85, max: -95 },
-            scale: { start: 0, end: 0.5, ease: 'Back.easeOut' },
-            alpha: { start: 1, end: 0, ease: 'Quart.easeOut' },
-            blendMode: 'SCREEN',
-            lifespan: 1000
-        });
-        this.mouse_trail.reserve(1000);        
-
-        this.input.on('pointermove', function (pointer) {
-            self.mouse_trail.setPosition(pointer.x, pointer.y);
-        });     */   
 
         // request game information
         this.socket.emit('gameInfo');

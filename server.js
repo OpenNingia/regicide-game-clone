@@ -250,6 +250,11 @@ class Room {
         this.game_info.castle_deck_size = this.castle_deck.size;
         this.game_info.discard_pile_size = 0;
         this.game_info.started = false;
+
+        // also needs to reset player hands
+        this.players.forEach(x => {
+            x.playerHand = [];
+        });
     }
 
     setCurrentPlayer(playerId) {
@@ -420,6 +425,8 @@ io.on('connection', function (socket) {
             return;
         }
 
+        room.resetGameInfo();
+
         // someone requested to deal the cards
         // first of all we shuffle the deck
         room.sendCardShuffle();
@@ -437,8 +444,7 @@ io.on('connection', function (socket) {
                 hand.push(room.deck.pop());
             x.playerHand = hand;
         });
-
-        room.resetGameInfo();        
+        
         room.setCurrentPlayer(playerId);
         room.startGame();
 

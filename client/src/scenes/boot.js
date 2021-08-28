@@ -74,6 +74,9 @@ export default class Boot extends Phaser.Scene {
         this.load.image('card-spades-12', 'src/assets/cards/card-spades-12.png');
         this.load.image('card-spades-13', 'src/assets/cards/card-spades-13.png');
 
+        this.load.image('card-joker-1', 'src/assets/cards/card-joker-1.png');
+        this.load.image('card-joker-2', 'src/assets/cards/card-joker-2.png');
+
         this.load.image('card-blank', 'src/assets/cards/card-blank.png');
 
         // particles
@@ -116,7 +119,7 @@ export default class Boot extends Phaser.Scene {
         // cursor
         this.input.setDefaultCursor('url(src/assets/cursors/sword.cur), pointer');
 
-        this.dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
+        let dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
 
         /** SOCKET CODE */
 
@@ -131,6 +134,11 @@ export default class Boot extends Phaser.Scene {
         this.socket.on('connect', function () {
         	console.log('Connected!');
             self.scene.start('Lobby', { socket: self.socket });
+        });
+
+        this.events.on('shutdown', function() {
+            console.log("(BOOT SCENE) SHUTDOWN");
+            dealText.destroy();
         });
     }
 

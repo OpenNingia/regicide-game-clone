@@ -28,7 +28,7 @@ export default class Lobby extends Phaser.Scene {
         this.players = [];
         this.amReady = false;
 
-        this.dealText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
+        this.waitText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
         
         let stdButtonConfig = {
             enabled: true,
@@ -40,29 +40,25 @@ export default class Lobby extends Phaser.Scene {
             fontFamily: 'CompassPro'
         };        
 
-        this.readyBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+        let readyBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
             self.amReady = !self.amReady;
             self.socket.emit('playerReady', self.amReady);
             
             if (self.amReady) {
-                self.readyBtn.setText(['[X] SONO PRONTO'])
+                readyBtn.setText(['[X] SONO PRONTO'])
             } else {
-                self.readyBtn.setText(['[] SONO PRONTO'])
+                readyBtn.setText(['[] SONO PRONTO'])
             }
         });
 
-        this.startBtn = new Button(this, {...stdButtonConfig}).setEnabled(false).onClick(function() {
+        let startBtn = new Button(this, {...stdButtonConfig}).setEnabled(false).onClick(function() {
             self.socket.emit('startGame');
         });       
 
-        this.readyBtn.render(75, 650, ['[] SONO PRONTO']);
-        this.startBtn.render(350, 650, ['[INIZIAMO!]']);        
+        let readyBtnObj = readyBtn.render(75, 650, ['[] SONO PRONTO']);
+        let startBtnObj = startBtn.render(350, 650, ['[INIZIAMO!]']);        
 
         /** SOCKET CODE */        
-        this.socket.off('playerJoin');
-        this.socket.off('canStartGame');
-        this.socket.off('startGame');
-
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
             self.players = playerList.map(x => new Player(x.playerId, x.playerName));
@@ -85,7 +81,7 @@ export default class Lobby extends Phaser.Scene {
         });
 
         this.socket.on('canStartGame', function (canStart) {
-            self.startBtn.setEnabled(canStart);
+            startBtn.setEnabled(canStart);
         });
 
         this.socket.on('startGame', function (roomName) {
@@ -94,11 +90,25 @@ export default class Lobby extends Phaser.Scene {
             self.scene.start('Game', { socket: self.socket, players: self.players, me: self.me });
         });
 
-        this.socket.emit('playerJoin');
+        this.events.on('shutdown', function() {
+            console.log("(LOBBY SCENE) SHUTDOWN");
+
+            self.socket.off('playerJoin');
+            self.socket.off('playerReady');
+            self.socket.off('canStartGame');
+            self.socket.off('startGame');            
+
+            self.waitText.destroy();
+
+            readyBtnObj.destroy();
+            startBtnObj.destroy();
+        });        
+
+        this.socket.emit('playerJoin');        
     }
 
     updatePlayerList() {
         let playerNames = this.players.map(x=>`> [${x.playerReady ? 'X' : ''}] ${x.playerName}`);
-        this.dealText.setText(['IN ATTESA DI GIOCATORI...'].concat(playerNames));        
+        this.waitText.setText(['IN ATTESA DI GIOCATORI...'].concat(playerNames));        
     }
 }

@@ -63,8 +63,8 @@ export default class Dealer {
             'card-spades-12', // J = 51
             'card-spades-13', // J = 52
 
-            'card-blank',
-            'card-blank',
+            'card-joker-1',
+            'card-joker-2',
         ]
 
         this.getSprite = (cardId) => {
