@@ -60,6 +60,7 @@ export default class Game extends Phaser.Scene {
 
         this.playerSlots = [];
         this.dealText = this.add.text(75, 275, ['[NUOVA]', '[PARTITA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
+        this.abortText = this.add.text(75, 375, ['[A MONTE]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
         this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
         this.playCardsText = this.add.text(530, 650, ['[GIOCA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
         this.passTurnText = this.add.text(690, 650, ['[PASSA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
@@ -93,6 +94,7 @@ export default class Game extends Phaser.Scene {
         // remove listeners to avoid listening multiple time to the same events
         this.socket.off('dealCards');
         this.socket.off('gameInfo');
+        this.socket.off('gameOver');
 
         this.socket.off('cardPlayed');
         this.socket.off('cardDraw');
@@ -106,7 +108,7 @@ export default class Game extends Phaser.Scene {
 		this.socket.on('dealCards', function (players) {
             console.log('Received dealCards event', players);            
             //self.dealer.dealCards(players);
-        })
+        })   
 
 		this.socket.on('shuffleCards', function () {
             console.log('Received shuffleCards event');            
@@ -274,6 +276,18 @@ export default class Game extends Phaser.Scene {
         this.dealText.on('pointerout', function () {
             self.dealText.setColor('#00ffff');
         })
+
+		this.abortText.on('pointerdown', function () {
+            self.socket.emit("gameOver");
+        })
+
+        this.abortText.on('pointerover', function () {
+            self.abortText.setColor('#ff69b4');
+        })
+
+        this.abortText.on('pointerout', function () {
+            self.abortText.setColor('#00ffff');
+        })        
 
         // mouse trail
         /*

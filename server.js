@@ -42,6 +42,7 @@ class GameInfo {
         this.castle_deck_size = 0;
         this.discard_pile_size = 0;
         this.current_player_damage = 0;
+        this.started = false;
         this.board = [];
     }
 }
@@ -247,11 +248,16 @@ class Room {
         this.game_info.tavern_deck_size = this.deck.length;
         this.game_info.castle_deck_size = this.castle_deck.size;
         this.game_info.discard_pile_size = 0;
+        this.game_info.started = false;
     }
 
     setCurrentPlayer(playerId) {
         this.game_info.current_player_id = playerId;
     }
+
+    startGame() {
+        this.game_info.started = true;
+    }    
 
     sendPlayerHands() {
         // TODO. private messages
@@ -274,6 +280,7 @@ class Room {
     }
 
     sendGameOver(victory) {
+        this.game_info.started = false;
         io.to(this.name).emit('gameOver', victory);
         console.log('E: gameOver', victory);
     }
@@ -358,6 +365,18 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('gameOver', function () {
+        console.log('R: gameOver');
+
+        if (room.game_info.started) {
+            room.sendGameOver();
+            room.resetGameInfo();
+            room.sendGameInfo();
+        } else {
+            console.log('Ignored because game is not started yet.');
+        }        
+    });
+
     socket.on('gameInfo', function () {
         io.to(socket.id).emit('gameInfo', room.game_info, room.players);
         console.log('E: gameInfo (requested)', socket.id, room.game_info, room.players);
@@ -365,6 +384,12 @@ io.on('connection', function (socket) {
 
     socket.on('dealCards', function (playerId) {
         console.log('R: dealCards');
+
+        if (room.game_info.started) {
+            console.log("Ignored because game is already started");
+            room.sendGameInfo();
+            return;
+        }
 
         // someone requested to deal the cards
         // first of all we shuffle the deck
@@ -384,8 +409,9 @@ io.on('connection', function (socket) {
             x.playerHand = hand;
         });
 
-        room.resetGameInfo();
+        room.resetGameInfo();        
         room.setCurrentPlayer(playerId);
+        room.startGame();
 
         // set the current monster
         room.nextMonster();

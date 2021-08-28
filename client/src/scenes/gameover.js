@@ -36,7 +36,7 @@ export default class GameOver extends Phaser.Scene {
 
         this.gameOverText.on('pointerout', function () {
             self.gameOverText.setColor('#00ffff');
-        })        
+        })     
     }
 
     update() {
