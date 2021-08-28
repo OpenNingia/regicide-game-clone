@@ -3,6 +3,7 @@ export default class Player {
 
         this.playerId = playerId;
         this.playerName = playerName;
+        this.playerReady = false;
         this.playerText = null;
         this.gameObjects = [];
 

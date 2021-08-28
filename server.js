@@ -26,6 +26,7 @@ class Player {
         this.playerId = playerId;
         this.playerName = playerName;
         this.playerHand = [];
+        this.ready = false;
     }
 }
 
@@ -338,13 +339,6 @@ io.on('connection', function (socket) {
     socket.join(room.name);
     console.log(`room ${room.name} players.length: ${(room.players.length + 1)}`);
 
-    /*
-    if (players.length >= 4) {
-        console.log('connection refused!');
-        socket.disconnect(true);
-        return;
-    }*/
-
     // e.g. BigRedDonkey
     const uniqueName = uniqueNamesGenerator({
         dictionaries: [adjectives, colors, animals],
@@ -359,11 +353,46 @@ io.on('connection', function (socket) {
         io.to(room.name).emit('playerJoin', socket.id, uniqueName, room.players);
         console.log('E: playerJoin', socket.id, uniqueName, room.players);
 
-        if (room.isFull()) {
+        /*if (room.isFull()) {
             io.to(room.name).emit('roomFull', room.name);
             console.log('E: roomFull', room.name);
-        }
+        }*/
     });
+
+    socket.on('playerReady', function (isReady) {
+        io.to(room.name).emit('playerReady', socket.id, isReady);
+        console.log('E: playerReady', socket.id, isReady);
+
+        room.players.find(x=>x.playerId==socket.id).ready = isReady;
+
+        // check if every player is ready
+        const readyNess = room.players.map(x=>x.ready);
+        const allReady = readyNess.every( v => v === readyNess[0] );
+        const canStart = allReady && room.players.length >= 2;
+
+        io.to(room.name).emit('canStartGame', canStart);
+        console.log('E: canStartGame', canStart);
+    });
+
+    socket.on('startGame', function () {
+        io.to(room.name).emit('startGame', room.name);
+        console.log('E: startGame', room.name);        
+    });
+
+    socket.on('playerReady', function (isReady) {
+        io.to(room.name).emit('playerReady', socket.id, isReady);
+        console.log('E: playerReady', socket.id, isReady);
+
+        room.players.find(x=>x.playerId==socket.id).ready = isReady;
+
+        // check if every player is ready
+        const readyNess = room.players.map(x=>x.ready);
+        const allReady = readyNess.every( v => v === readyNess[0] );
+        const canStart = allReady && room.players.length >= 2;
+
+        io.to(room.name).emit('canStartGame', canStart);
+        console.log('E: canStartGame', canStart);
+    });    
 
     socket.on('gameOver', function () {
         console.log('R: gameOver');

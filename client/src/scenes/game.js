@@ -2,8 +2,7 @@ import Card from '../helpers/card';
 import Zone from '../helpers/zone';
 import CastleZone from '../helpers/castleZone';
 import Dealer from '../helpers/dealer';
-import Player from '../helpers/player';
-import io from 'socket.io-client';
+import Button from '../helpers/button';
 import { setupBackground, randomChoose } from '../helpers/util';
 
 export default class Game extends Phaser.Scene {
@@ -59,11 +58,42 @@ export default class Game extends Phaser.Scene {
         setupBackground(this);     
 
         this.playerSlots = [];
-        this.dealText = this.add.text(75, 275, ['[NUOVA]', '[PARTITA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
-        this.abortText = this.add.text(75, 375, ['[A MONTE]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
+
+        let stdButtonConfig = {
+            enabled: true,
+            visible: true,
+            color: '#00ffff',
+            hoveringColor: '#ff69b4',
+            disabledColor: '#eee',
+            fontSize: 32,
+            fontFamily: 'CompassPro',            
+        };
+
+        // BOTTONE NUOVA PARTITA / DAI CARTE
+        this.dealBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+            self.socket.emit("dealCards", self.me.playerId);
+        }); 
+        this.dealBtn.render(75, 275, ['[NUOVA]', '[PARTITA]']);
+
+        // BOTTONE MANDA A MONTE
+        this.abortBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+            self.socket.emit("gameOver");
+        }); 
+        this.abortBtn.render(75, 375, ['[A MONTE]']);
+
+        // BOTTONE GIOCA CARTE
+        this.playCardsBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+            self.playCards();
+        }).setVisible(false); 
+        this.playCardsBtn.render(530, 650, ['[GIOCA]']);
+        
+        // BOTTONE PASSA TURNO
+        this.passTurnBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+            self.passTurn();
+        }).setVisible(false); 
+        this.passTurnBtn.render(690, 650, ['[PASSA]']);
+
         this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
-        this.playCardsText = this.add.text(530, 650, ['[GIOCA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
-        this.passTurnText = this.add.text(690, 650, ['[PASSA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive().setVisible(false);
         this.damageText = this.add.text(75, 580, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
             .setFontSize(24).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(false);
 
@@ -185,31 +215,28 @@ export default class Game extends Phaser.Scene {
             self.castleZoneObj.data.values.objects.push(hpDmgTextObj);
 
             // update decks
-            //self.deckText.setText([`TAVERNA   (${gameInfo.tavern_deck_size})`, `SCARTI      (${gameInfo.discard_pile_size})`, `CASTELLO (${gameInfo.castle_deck_size})`])
             self.deckText.setText([`(${gameInfo.tavern_deck_size})`, `(${gameInfo.discard_pile_size})`, `(${gameInfo.castle_deck_size})`])
-
             //
 
-            self.setHandInteractive(false);
-            self.yourTurnText.setVisible(false);
-            self.playCardsText.setVisible(false);
-            self.passTurnText.setVisible(false);
+            const isMyTurn = gameInfo.current_player_id == self.me.playerId;
+            const doIHaveAnyCards = self.me.gameObjects.length > 0;
+            const doIHaveDamage = gameInfo.current_player_damage > 0;
+
+            self.setHandInteractive(isMyTurn);
+
+            self.yourTurnText.setVisible(isMyTurn);
             self.damageText.setVisible(false);
 
-            if (gameInfo.current_player_id == self.me.playerId) {
+            self.playCardsBtn.setVisible(isMyTurn && doIHaveAnyCards);
+            self.passTurnBtn.setVisible(isMyTurn);
+
+            if (isMyTurn) {
                 console.log("ITS MY TURN!!!");
 
-                if ( gameInfo.current_player_damage === 0 ) {
-                    self.yourTurnText.setVisible(true);
-                    self.playCardsText.setVisible(true);
-                    self.passTurnText.setInteractive().setColor('#00ffff').setVisible(true);
-                    self.setHandInteractive(true);
-                } else {
+                if ( doIHaveDamage ) {
                     self.damageText.setText(['HAI SUBITO DANNI!', `SCARTA ${gameInfo.current_player_damage}`, 'PER CONTINUARE']);
                     self.damageText.setVisible(true);
-                    self.playCardsText.setVisible(true);
-                    self.passTurnText.disableInteractive().setColor('#eee').setVisible(true);
-                    self.setHandInteractive(true);
+                    self.yourTurnText.setVisible(false);
                 }
             }
         })
@@ -240,54 +267,6 @@ export default class Game extends Phaser.Scene {
         /** END SOCKET CODE */
 
         this.dealer = new Dealer(this);
-
-		this.playCardsText.on('pointerdown', function () {
-            self.playCards();
-        })
-
-        this.playCardsText.on('pointerover', function () {
-            self.playCardsText.setColor('#ff69b4');
-        })
-
-        this.playCardsText.on('pointerout', function () {
-            self.playCardsText.setColor('#00ffff');
-        })
-
-		this.passTurnText.on('pointerdown', function () {
-            self.passTurn();
-        })
-
-        this.passTurnText.on('pointerover', function () {
-            self.passTurnText.setColor('#ff69b4');
-        })
-
-        this.passTurnText.on('pointerout', function () {
-            self.passTurnText.setColor('#00ffff');
-        })        
-
-		this.dealText.on('pointerdown', function () {
-            self.socket.emit("dealCards", self.me.playerId);
-        })
-
-        this.dealText.on('pointerover', function () {
-            self.dealText.setColor('#ff69b4');
-        })
-
-        this.dealText.on('pointerout', function () {
-            self.dealText.setColor('#00ffff');
-        })
-
-		this.abortText.on('pointerdown', function () {
-            self.socket.emit("gameOver");
-        })
-
-        this.abortText.on('pointerover', function () {
-            self.abortText.setColor('#ff69b4');
-        })
-
-        this.abortText.on('pointerout', function () {
-            self.abortText.setColor('#00ffff');
-        })        
 
         // mouse trail
         /*
