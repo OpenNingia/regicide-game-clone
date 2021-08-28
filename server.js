@@ -259,6 +259,11 @@ class Room {
         console.log('E: dealCards', this.players);
     }
 
+    sendCardShuffle() {
+        io.to(this.name).emit('shuffleCards');
+        console.log('E: shuffleCards');
+    }    
+
     sendGameInfo() {
         this.game_info.castle_deck_size = this.castle_deck.length;
         this.game_info.tavern_deck_size = this.deck.length;
@@ -363,11 +368,13 @@ io.on('connection', function (socket) {
 
         // someone requested to deal the cards
         // first of all we shuffle the deck
+        room.sendCardShuffle();
+
         room.deck = buildTavernDeck();
         console.log('tavern deck: ', room.deck);
 
         room.castle_deck = buildCastleDeck();
-        console.log('castle deck: ', room.castle_deck);
+        console.log('castle deck: ', room.castle_deck);        
 
         // then for each player we deal 5 cards
         room.players.forEach(x => {
@@ -376,8 +383,6 @@ io.on('connection', function (socket) {
                 hand.push(room.deck.pop());
             x.playerHand = hand;
         });
-
-        //room.sendPlayerHands();
 
         room.resetGameInfo();
         room.setCurrentPlayer(playerId);
@@ -413,12 +418,11 @@ io.on('connection', function (socket) {
 
             cards.forEach(cardId => {
                 player.playerHand = player.playerHand.filter(x => x !== cardId);
-                room.discard_pile.push(cardId);
-
-                // we tell the client that a card was played
-                io.to(room.name).emit('cardDiscarded', cardId, playerId);
-                console.log('E: cardDiscarded', cardId, playerId);
+                room.discard_pile.push(cardId);               
             });
+
+            io.to(playerId).emit('cardsDiscarded', cards, playerId);
+            console.log('E: cardsDiscarded', cards, playerId);
 
             //room.sendPlayerHands();
 
@@ -455,7 +459,7 @@ io.on('connection', function (socket) {
             console.log('E: cardPlayed', cardId, playerId);
         });
 
-        room.sendPlayerHands();
+        //room.sendPlayerHands();
 
         if (hasCardSeed(cards, 'jolly')) {
 
@@ -478,6 +482,10 @@ io.on('connection', function (socket) {
         let seeds = cards.map(x=>getCardSeed(x));
         // remove duplicates
         seeds = seeds.filter((v, i, a) => a.indexOf(v) === i);
+
+        if (cards.length > 1) {
+            console.log(`played ${cards.length} combo. seeds: ${seeds}`);
+        }
 
         seeds.forEach(seed => {
 
@@ -549,16 +557,15 @@ io.on('connection', function (socket) {
                             let card = drawn_cards.pop();
                             availablePlayers[i].playerHand.push(card);
 
-
                             // we tell the client that a card was draw
-                            //io.emit('cardDraw', cardId, playerId);
-                            //console.log('E: cardDraw', cardId, playerId);
+                            io.to(playerId).emit('cardDraw', card, playerId);
+                            console.log('E: cardDraw', card, playerId);
                         }
                     }
 
                     console.log('drawn cards:', drawn_cards);
 
-                    room.sendPlayerHands();
+                    // room.sendPlayerHands();
 
                 } else if (seed == 'clubs') {
                     console.log('played clubs card, double damage!!!');
@@ -568,7 +575,7 @@ io.on('connection', function (socket) {
                     apply_shield = true;
                 }
             } else {
-                console.log('The enemy is immune to this card effects!');
+                console.log(`The enemy is immune to "${seed}" effects!`);
             }
         });
 

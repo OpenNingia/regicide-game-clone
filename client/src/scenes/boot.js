@@ -81,12 +81,40 @@ export default class Boot extends Phaser.Scene {
 
         // old scroll
         this.load.image('old-scroll', 'src/assets/old_scroll_dark.png');
+
+        // sound effects
+        this.load.audio('card-shuffle', 'src/assets/audio/sfx/cardShuffle.wav');
+
+        this.load.audio('card-place-1', 'src/assets/audio/sfx/cardPlace1.wav');
+        this.load.audio('card-place-2', 'src/assets/audio/sfx/cardPlace2.wav');
+        this.load.audio('card-place-3', 'src/assets/audio/sfx/cardPlace3.wav');
+        this.load.audio('card-place-4', 'src/assets/audio/sfx/cardPlace4.wav');
+
+        this.load.audio('card-shove-1', 'src/assets/audio/sfx/cardShove1.wav');
+        this.load.audio('card-shove-2', 'src/assets/audio/sfx/cardShove2.wav');
+        this.load.audio('card-shove-3', 'src/assets/audio/sfx/cardShove3.wav');
+        this.load.audio('card-shove-4', 'src/assets/audio/sfx/cardShove4.wav');
+
+        this.load.audio('card-slide-1', 'src/assets/audio/sfx/cardSlide1.wav');
+        this.load.audio('card-slide-2', 'src/assets/audio/sfx/cardSlide2.wav');
+        this.load.audio('card-slide-3', 'src/assets/audio/sfx/cardSlide3.wav');
+        this.load.audio('card-slide-4', 'src/assets/audio/sfx/cardSlide4.wav');
+        this.load.audio('card-slide-5', 'src/assets/audio/sfx/cardSlide5.wav');
+        this.load.audio('card-slide-6', 'src/assets/audio/sfx/cardSlide6.wav');
+        this.load.audio('card-slide-7', 'src/assets/audio/sfx/cardSlide7.wav');
+        this.load.audio('card-slide-8', 'src/assets/audio/sfx/cardSlide8.wav');
+
+        this.load.audio('chip-lay-1', 'src/assets/audio/sfx/chipLay1.wav');
+
     }
 
     create() {
         let self = this;
 
         setupBackground(this);
+
+        // cursor
+        this.input.setDefaultCursor('url(src/assets/cursors/sword.cur), pointer');
 
         this.dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
 

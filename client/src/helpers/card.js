@@ -1,3 +1,5 @@
+import { randomChoose } from "./util";
+
 export default class Card {
     constructor(scene, cardId) {
         this.cardId = cardId;
@@ -5,26 +7,31 @@ export default class Card {
         let self = this;
         this.render = (x, y, scale, isDraggable, sprite) => {
             let card = scene.add.image(x, y, sprite).setScale(scale, scale).setInteractive();
+            let originalY = y;
             card.cardId = self.cardId;
-            card.selected = false;
+            card.selected = false;            
 
+            card.on('pointerover', function () {
+                card.setTint(0x00ffff);
+                scene.card_hover_sfx.play();
+            })
+    
+            card.on('pointerout', function () {
+                card.setTint(0xffffff);
+                scene.card_hover_sfx.stop();
+            })
 
             card.on('pointerdown', function () {
                 console.log('clicked on card', self.cardId);
-                card.selected = !card.selected;
+
+                randomChoose(scene.card_slide_sfx).play();
+
+                card.selected = !card.selected;                
 
                 if ( card.selected ) {
-                    card.particles = scene.add.particles('fire');
-                    card.emitter = card.particles.createEmitter({
-                        speed: 100,
-                        lifespan: 300,
-                        scale: { start: 0.5, end: 0 },
-                        alpha: 0.6,
-                        blendMode: 'ADD'
-                    });
-                    card.emitter.startFollow(card, -30, -40, true);
+                    card.setPosition(card.x, originalY - 20);
                 } else {
-                    card.emitter.remove();
+                    card.setPosition(card.x, originalY);
                 }
             })
 

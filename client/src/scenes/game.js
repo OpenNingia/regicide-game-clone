@@ -4,7 +4,7 @@ import CastleZone from '../helpers/castleZone';
 import Dealer from '../helpers/dealer';
 import Player from '../helpers/player';
 import io from 'socket.io-client';
-import { setupBackground } from '../helpers/util';
+import { setupBackground, randomChoose } from '../helpers/util';
 
 export default class Game extends Phaser.Scene {
     constructor() {
@@ -23,6 +23,32 @@ export default class Game extends Phaser.Scene {
 
     preload() {
         console.log("preload game scene");
+
+        this.card_place_sfx = [
+            this.sound.add('card-place-1'),
+            this.sound.add('card-place-2'),
+            this.sound.add('card-place-3'),
+            this.sound.add('card-place-4')];
+
+        this.card_shove_sfx = [
+            this.sound.add('card-shove-1'),
+            this.sound.add('card-shove-2'),
+            this.sound.add('card-shove-3'),
+            this.sound.add('card-shove-4')];  
+            
+        this.card_slide_sfx = [
+            this.sound.add('card-slide-1'),
+            this.sound.add('card-slide-2'),
+            this.sound.add('card-slide-3'),
+            this.sound.add('card-slide-4'),
+            this.sound.add('card-slide-5'),
+            this.sound.add('card-slide-6'),
+            this.sound.add('card-slide-7'),
+            this.sound.add('card-slide-8')];
+
+
+        this.card_hover_sfx = this.sound.add('chip-lay-1');
+        this.card_shuffle_sfx = this.sound.add('card-shuffle');          
     }
 
     create() {
@@ -30,7 +56,7 @@ export default class Game extends Phaser.Scene {
 
         let self = this;
 
-        setupBackground(this);
+        setupBackground(this);     
 
         this.playerSlots = [];
         this.dealText = this.add.text(75, 275, ['[NUOVA]', '[PARTITA]']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setInteractive();
@@ -70,14 +96,21 @@ export default class Game extends Phaser.Scene {
 
         this.socket.off('cardPlayed');
         this.socket.off('cardDraw');
+        this.socket.off('cardsDiscarded');
+
+        this.socket.off('shuffleCards');
 
 
         // we receive also the event for the other players
         // this is not very cheat-proof :D
 		this.socket.on('dealCards', function (players) {
-            console.log('Received dealCards event', players);
+            console.log('Received dealCards event', players);            
+            //self.dealer.dealCards(players);
+        })
 
-            self.dealer.dealCards(players);
+		this.socket.on('shuffleCards', function () {
+            console.log('Received shuffleCards event');            
+            self.card_shuffle_sfx.play({ rate: 2 });
         })
 
         this.socket.on('gameInfo', function (gameInfo, players) {
@@ -181,11 +214,18 @@ export default class Game extends Phaser.Scene {
 
         this.socket.on('cardPlayed', function (cardId, playerId) {
             console.log('Received cardPlayed event', cardId, playerId);
+            randomChoose(self.card_place_sfx).play();
         })
 
         this.socket.on('cardDraw', function (cardId, playerId) {
             console.log('Received cardDraw event', cardId, playerId);
+            randomChoose(self.card_shove_sfx).play();
         })
+
+        this.socket.on('cardsDiscarded', function (cards, playerId) {
+            console.log('Received cardsDiscarded event', cards, playerId);
+            randomChoose(self.card_shove_sfx).play();
+        })        
 
         this.socket.on('gameOver', function(youWin) {
             if (youWin === true) {
@@ -236,6 +276,7 @@ export default class Game extends Phaser.Scene {
         })
 
         // mouse trail
+        /*
         this.mouse_trail = this.add.particles('fire').createEmitter({
             x: 0,
             y: 720,
@@ -250,7 +291,7 @@ export default class Game extends Phaser.Scene {
 
         this.input.on('pointermove', function (pointer) {
             self.mouse_trail.setPosition(pointer.x, pointer.y);
-        });        
+        });     */   
 
         // request game information
         this.socket.emit('gameInfo');
@@ -287,6 +328,6 @@ export default class Game extends Phaser.Scene {
     }    
 
     canPlayCards(cards) {
-        return true;
+        return cards.length > 0;
     }
 }

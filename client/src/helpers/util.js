@@ -1,4 +1,3 @@
-
 /**
  * 
  * @param {Phaser.Scene} scene 
@@ -32,4 +31,8 @@ export function setupBackground(scene) {
     createAligned(scene, totalWidth, 'bg1', 0.0);
     createAligned(scene, totalWidth, 'bg2', 0.25);
     createAligned(scene, totalWidth, 'bg2', 0.5);    
+}
+
+export function randomChoose(choose_array) {
+	return choose_array[Math.floor(Math.random() * choose_array.length)];
 }
