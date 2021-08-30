@@ -14,7 +14,7 @@ const shuffle = require('knuth-shuffle');
 const { uniqueNamesGenerator, adjectives, colors, animals } = require('unique-names-generator');
 // const { runInThisContext } = require('vm');
 
-const CARDS_TO_DEAL = 5;
+const MAX_HAND_SIZES = [0, 0, 7, 6, 5];
 
 const JACKS = [11, 24, 37, 50];
 const QUEENS = [12, 25, 38, 51];
@@ -320,6 +320,10 @@ class Room {
         this.setCurrentPlayer(next.playerId);
         console.log(`next player id: ${this.game_info.current_player_id}`);
     }
+
+    getMaxHandSize() {
+        return MAX_HAND_SIZES[this.players.length];
+    }
 }
 
 const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
@@ -437,10 +441,10 @@ io.on('connection', function (socket) {
         room.castle_deck = buildCastleDeck();
         console.log('castle deck: ', room.castle_deck);        
 
-        // then for each player we deal 5 cards
+        // then for each player we deal the appropriate number of cards
         room.players.forEach(x => {
             let hand = []
-            for (let i = 0; i < CARDS_TO_DEAL; i++)
+            for (let i = 0; i < room.getMaxHandSize(); i++)
                 hand.push(room.deck.pop());
             x.playerHand = hand;
         });
@@ -575,12 +579,11 @@ io.on('connection', function (socket) {
                     }
                 } else if (seed == 'diamonds') {
                     console.log('played diamonds card, draw cards from tavern deck.');
-                    // draw cards from tavern deck and put in players
-                    // hands. max 5 cards per player.
 
+                    // draw cards from tavern deck and put in players hands.
                     const playerHands = room.players.map(x=>x.playerHand.length);
                     const playerCards = playerHands.reduce((a, b) => a+b, 0);
-                    const maxPlayerCards = room.players.length * 5;
+                    const maxPlayerCards = room.players.length * room.getMaxHandSize();
                     const maxDrawnCards = maxPlayerCards - playerCards;
 
                     let drawn_cards = [];
@@ -605,7 +608,7 @@ io.on('connection', function (socket) {
                             break;
                         }
 
-                        let availablePlayers = room.players.filter(x=>x.playerHand.length < 5);
+                        let availablePlayers = room.players.filter(x=>x.playerHand.length < room.getMaxHandSize());
                         if (availablePlayers.length == 0) {
                             break;
                         }
