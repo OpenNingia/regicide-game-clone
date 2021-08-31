@@ -3,6 +3,7 @@ import Boot from "./scenes/boot";
 import Lobby from "./scenes/lobby";
 import Game from "./scenes/game";
 import GameOver from "./scenes/gameover";
+import SelectPlayer from "./scenes/selectplayer";
 
 // SERVICE WORKER -- NEEDED FOR PWA
 if ('serviceWorker' in navigator) {
@@ -25,7 +26,8 @@ const config = {
         Boot,
         Lobby,
         Game,
-        GameOver
+        GameOver,
+        SelectPlayer
     ],
     scale: {
         //mode: Phaser.Scale.HEIGHT_CONTROLS_WIDTH,

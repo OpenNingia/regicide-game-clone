@@ -110,8 +110,8 @@ export default class Dealer {
                     for (let j = 0; j < the_hand.length; j++) {                                                        
                         let card = new Card(scene, 0);
                         gamePlayer.gameObjects.push(
-                            card.render(xy.x + (j * 50), xy.y, 0.4, false, xy.sprite));
-                    }  
+                            card.render(xy.x + (j * 50), xy.y, 0.4, false, xy.sprite).disableInteractive());
+                    }                      
                 }
             }         
         }

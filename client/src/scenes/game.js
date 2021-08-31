@@ -252,9 +252,16 @@ export default class Game extends Phaser.Scene {
             }
         })
 
+        this.socket.on('nextPlayer', function () {
+            console.log('Received nextPlayer event');
+            // I need to choose the next player
+            
+            self.scene.pause().launch('SelectPlayer', { socket: self.socket, players: self.players });
+        })
+
         this.socket.on('cardPlayed', function (cardId, playerId) {
             console.log('Received cardPlayed event', cardId, playerId);
-            randomChoose(self.card_place_sfx).play();
+            randomChoose(self.card_place_sfx).play();            
         })
 
         this.socket.on('cardDraw', function (cardId, playerId) {

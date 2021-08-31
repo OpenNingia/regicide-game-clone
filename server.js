@@ -372,11 +372,13 @@ io.on('connection', function (socket) {
     room.players.push(player);
 
     socket.on('playerJoin', function () {
+        logger.debug('R: playerJoin -- id: %s', socket.id);
         io.to(room.name).emit('playerJoin', socket.id, uniqueName, room.players);
         logger.debug('E: playerJoin -- id: %s, name: %s, players: %o', socket.id, uniqueName, room.players);
     });
 
     socket.on('playerReady', function (isReady) {
+        logger.debug('R: playerReady -- id: %s, ready: %o', socket.id, isReady);
         io.to(room.name).emit('playerReady', socket.id, isReady);
         logger.debug('E: playerReady -- id: %s, ready: %o', socket.id, isReady);
 
@@ -392,9 +394,16 @@ io.on('connection', function (socket) {
     });
 
     socket.on('startGame', function () {
+        logger.debug('R: startGame');
         io.to(room.name).emit('startGame', room.name);
         logger.debug('E: startGame. Room: %s', room.name);
     });
+
+    socket.on('nextPlayer', function (nextPlayerId) {        
+        logger.debug('R: nextPlayer -- playerId: %s', nextPlayerId);
+        room.setCurrentPlayer(nextPlayerId);
+        room.sendGameInfo();        
+    });    
 
     socket.on('gameOver', function () {
         logger.debug('R: gameOver');
@@ -532,9 +541,13 @@ io.on('connection', function (socket) {
             // TODO. the played will need to choose the next player
             // for the moment we choose a random player
 
-            let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x => x.playerId).slice(0));
-            room.setCurrentPlayer(nextPlayerId);
-            room.sendGameInfo();
+            //let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x => x.playerId).slice(0));
+            //room.setCurrentPlayer(nextPlayerId);
+            //room.sendGameInfo();
+
+            // ask the current player to choose the next
+            io.to(socket.id).emit('nextPlayer');
+            logger.debug('E: nextPlayer');            
             return;
         }
 
@@ -555,8 +568,9 @@ io.on('connection', function (socket) {
             // if monster has immunity to that seed
             // no effect is applied
 
-            if (getCardSeed(room.game_info.current_monster) === 'spades') {
+            if (seed === 'spades') {
                 room.game_info.potential_shield += getCardsAttackValue(cards);
+                logger.info('Potential shield: %d', room.game_info.potential_shield);
             }
 
             if ((getCardSeed(room.game_info.current_monster) != seed) || !room.game_info.monster_has_immunity) {
@@ -643,7 +657,7 @@ io.on('connection', function (socket) {
                     logger.info('Played clubs card, double damage!!!');
                     double_damage = true;
                 } else if (seed === 'spades') {
-                    logger.info('Played clubs card, shields up!!!');
+                    logger.info('Played spades card, shields up!!!');
                     apply_shield = true;
                 }
             } else {
