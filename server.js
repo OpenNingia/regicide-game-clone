@@ -87,7 +87,7 @@ function isValidPlay(cards) {
         return true;
     }
 
-    // the jolly needs to be played alone
+    // the jester needs to be played alone
     if (cards.indexOf(53) >= 0 || cards.indexOf(54) >= 0) {
         return false;
     }
@@ -140,7 +140,7 @@ function getCardSeed(cardId) {
         return 'spades';
     }
     if (cardId === 53 || cardId === 54) {
-        return 'jolly';
+        return 'jester';
     }
     return 'unknown';
 }
@@ -222,7 +222,7 @@ function buildCastleDeck() {
     return kings.concat(queens, jacks);
 }
 
-function buildTavernDeck() {
+function buildTavernDeck(playersCount) {
     let my_deck = [];
 
     // add clubs 1-10
@@ -245,9 +245,15 @@ function buildTavernDeck() {
         my_deck.push(i);
     }
 
-    // add the two jolly
-    my_deck.push(53);
-    my_deck.push(54);
+    // 4 players: add two jesters
+    // 3 players: add one jesters
+    // 2 players: add no jesters
+    if (playersCount > 2) {
+        my_deck.push(53);
+    }
+    if (playersCount > 3) {
+        my_deck.push(54);
+    }
 
     return shuffle.knuthShuffle(my_deck.slice(0));
 }
@@ -272,6 +278,10 @@ class Room {
     isFull() {
         return this.players.length >= 4;
     }
+
+    isStarted() {
+        return this.game_info.started;
+    }    
 
     resetGameInfo() {
         this.game_info = new GameInfo();
@@ -358,7 +368,7 @@ class Room {
 const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
 
 function getFreeRoom() {
-    let freeRooms = ROOMS.filter(x => !x.isFull());
+    let freeRooms = ROOMS.filter(x => !x.isFull() && !x.isStarted());
     if (freeRooms.length == 0)
         return null;
     return freeRooms[0];
@@ -444,7 +454,7 @@ io.on('connection', function (socket) {
         // first of all we shuffle the deck
         room.sendCardShuffle();
 
-        room.deck = buildTavernDeck();
+        room.deck = buildTavernDeck(room.players.length);
         logger.debug('tavern deck. %d cards, %o', room.deck.length, room.deck);
 
         room.castle_deck = buildCastleDeck();
@@ -539,7 +549,7 @@ io.on('connection', function (socket) {
 
         //room.sendPlayerHands();
 
-        if (hasCardSeed(cards, 'jolly')) {
+        if (hasCardSeed(cards, 'jester')) {
 
             logger.info('Played a jester, which disables enemy immunity');
 
