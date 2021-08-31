@@ -12,6 +12,35 @@ const io = require('socket.io')(http, {
 });
 const shuffle = require('knuth-shuffle');
 const { uniqueNamesGenerator, adjectives, colors, animals } = require('unique-names-generator');
+//const { PRIORITY_NORMAL } = require('constants');
+
+const pino = require('pino');
+
+// Create a logging instance
+const logger = pino({
+    //level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+    level: 'trace'
+});
+
+/*
+const winston = require('winston');
+
+const logger = winston.createLogger({
+    level: 'debug',
+    format: winston.format.combine(
+        winston.format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss'
+        }),
+        winston.format.errors({ stack: true }),
+        winston.format.splat(),
+        winston.format.prettyPrint()
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'server.log' })
+    ]
+});*/
+
 // const { runInThisContext } = require('vm');
 
 const MAX_HAND_SIZES = [0, 0, 7, 6, 5];
@@ -67,18 +96,18 @@ function isValidPlay(cards) {
     // first of all check familiars
 
     // 1, 14, 27, 40
-    let familiars = cards.filter(x=>x===1||x===14||x===27||x===40);
-    let not_familiars = cards.filter(x=>x!==1&&x!==14&&x!==27&&x!==40);
+    let familiars = cards.filter(x => x === 1 || x === 14 || x === 27 || x === 40);
+    let not_familiars = cards.filter(x => x !== 1 && x !== 14 && x !== 27 && x !== 40);
 
     // there can be at most one familiar
     if (familiars.length > 1) {
         return false;
     }
 
-    let values = not_familiars.map(x=>x % 13);
+    let values = not_familiars.map(x => x % 13);
     // 0 == 13
     values = values.map(x => {
-        if ( x == 0 ) {
+        if (x == 0) {
             return 13;
         }
         return x;
@@ -88,11 +117,11 @@ function isValidPlay(cards) {
     // if they are the same
     // and their sum is equal or less than 10
     let sum = values.reduce((a, b) => a + b, 0);
-    if ( sum > 10 ) {
+    if (sum > 10) {
         return false;
     }
 
-    const all_equals = values.every( v => v === values[0] );
+    const all_equals = values.every(v => v === values[0]);
 
     return all_equals;
 }
@@ -225,7 +254,7 @@ function buildTavernDeck() {
 
 
 function hasCardSeed(cards, seed) {
-    return cards.some(x=>getCardSeed(x) == seed);
+    return cards.some(x => getCardSeed(x) == seed);
 }
 
 //
@@ -263,18 +292,18 @@ class Room {
 
     startGame() {
         this.game_info.started = true;
-    }    
+    }
 
     sendPlayerHands() {
         // TODO. private messages
         io.to(this.name).emit('dealCards', this.players);
-        console.log('E: dealCards', this.players);
+        logger.debug('E: dealCards to %o', this.players);
     }
 
     sendCardShuffle() {
         io.to(this.name).emit('shuffleCards');
-        console.log('E: shuffleCards');
-    }    
+        logger.debug('E: shuffleCards');
+    }
 
     sendGameInfo() {
         this.game_info.castle_deck_size = this.castle_deck.length;
@@ -282,13 +311,13 @@ class Room {
         this.game_info.discard_pile_size = this.discard_pile.length;
 
         io.to(this.name).emit('gameInfo', this.game_info, this.players);
-        console.log('E: gameInfo', this.game_info, this.players);
+        logger.debug('E: gameInfo -- gameInfo: %o, players: %o', this.game_info, this.players);
     }
 
     sendGameOver(victory) {
         this.game_info.started = false;
         io.to(this.name).emit('gameOver', victory);
-        console.log('E: gameOver', victory);
+        logger.debug('E: gameOver -- %o', victory);
     }
 
     nextMonster() {
@@ -304,21 +333,21 @@ class Room {
     logCurrentMonsterStatus() {
         let card_kind = getCardKind(this.game_info.current_monster);
         let card_seed = getCardSeed(this.game_info.current_monster);
-        console.log('current monster is: ' + card_kind + ' of ' + card_seed);
-        console.log('current HP: ' + (this.game_info.current_monster_hp-this.game_info.current_inflicted_damage) + ' of ' + this.game_info.current_monster_hp);
-        console.log('attack damage: ' + getCardAttackValue(this.game_info.current_monster));
+        logger.info('current monster is: %s of %s', card_kind, card_seed);
+        logger.info('current HP: %d of %d', (this.game_info.current_monster_hp - this.game_info.current_inflicted_damage), this.game_info.current_monster_hp);
+        logger.debug('attack damage: %d', getCardAttackValue(this.game_info.current_monster));
     }
 
     nextPlayer() {
-        let player = this.players.find(x=>x.playerId===this.game_info.current_player_id);
-        console.log(`current player id: ${this.game_info.current_player_id}`);
+        let player = this.players.find(x => x.playerId === this.game_info.current_player_id);
+        logger.debug('current player id: %s', this.game_info.current_player_id);
         let playerIdx = this.players.indexOf(player);
-        console.log(`found at index: ${playerIdx}`);
-        let nextIndex = (playerIdx+1) % this.players.length;
-        console.log(`next index: ${nextIndex}`);
+        logger.debug('found at index: %d', playerIdx);
+        let nextIndex = (playerIdx + 1) % this.players.length;
+        logger.debug('next index: %d', nextIndex);
         let next = this.players[nextIndex];
         this.setCurrentPlayer(next.playerId);
-        console.log(`next player id: ${this.game_info.current_player_id}`);
+        logger.debug('next player id: %s', this.game_info.current_player_id);
     }
 
     getMaxHandSize() {
@@ -329,24 +358,24 @@ class Room {
 const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
 
 function getFreeRoom() {
-    let freeRooms = ROOMS.filter(x=>!x.isFull());
+    let freeRooms = ROOMS.filter(x => !x.isFull());
     if (freeRooms.length == 0)
         return null;
     return freeRooms[0];
 }
 
 io.on('connection', function (socket) {
-    console.log('A user connected: ' + socket.id);
+    logger.debug('A user connected: %s', socket.id);
 
     const room = getFreeRoom();
-    if ( room === null ) {
-        console.log('connection refused!');
+    if (room === null) {
+        logger.debug('connection refused!');
         socket.disconnect(true);
         return;
     }
 
     socket.join(room.name);
-    console.log(`room ${room.name} players.length: ${(room.players.length + 1)}`);
+    logger.debug('room %s players.length: %d', room.name, (room.players.length + 1));
 
     // e.g. BigRedDonkey
     const uniqueName = uniqueNamesGenerator({
@@ -360,71 +389,51 @@ io.on('connection', function (socket) {
 
     socket.on('playerJoin', function () {
         io.to(room.name).emit('playerJoin', socket.id, uniqueName, room.players);
-        console.log('E: playerJoin', socket.id, uniqueName, room.players);
-
-        /*if (room.isFull()) {
-            io.to(room.name).emit('roomFull', room.name);
-            console.log('E: roomFull', room.name);
-        }*/
+        logger.debug('E: playerJoin -- id: %s, name: %s, players: %o', socket.id, uniqueName, room.players);
     });
 
     socket.on('playerReady', function (isReady) {
         io.to(room.name).emit('playerReady', socket.id, isReady);
-        console.log('E: playerReady', socket.id, isReady);
+        logger.debug('E: playerReady -- id: %s, ready: %o', socket.id, isReady);
 
-        room.players.find(x=>x.playerId==socket.id).ready = isReady;
+        room.players.find(x => x.playerId == socket.id).ready = isReady;
 
         // check if every player is ready
-        const readyNess = room.players.map(x=>x.ready);
-        const allReady = readyNess.every( v => v === readyNess[0] );
+        const readyNess = room.players.map(x => x.ready);
+        const allReady = readyNess.every(v => v === readyNess[0]);
         const canStart = allReady && room.players.length >= 2;
 
         io.to(room.name).emit('canStartGame', canStart);
-        console.log('E: canStartGame', canStart);
+        logger.debug('E: canStartGame: %o', canStart);
     });
 
     socket.on('startGame', function () {
         io.to(room.name).emit('startGame', room.name);
-        console.log('E: startGame', room.name);        
+        logger.debug('E: startGame. Room: %s', room.name);
     });
 
-    socket.on('playerReady', function (isReady) {
-        io.to(room.name).emit('playerReady', socket.id, isReady);
-        console.log('E: playerReady', socket.id, isReady);
-
-        room.players.find(x=>x.playerId==socket.id).ready = isReady;
-
-        // check if every player is ready
-        const readyNess = room.players.map(x=>x.ready);
-        const allReady = readyNess.every( v => v === readyNess[0] );
-        const canStart = allReady && room.players.length >= 2;
-
-        io.to(room.name).emit('canStartGame', canStart);
-        console.log('E: canStartGame', canStart);
-    });    
-
     socket.on('gameOver', function () {
-        console.log('R: gameOver');
+        logger.debug('R: gameOver');
 
         if (room.game_info.started) {
             room.sendGameOver();
             room.resetGameInfo();
             room.sendGameInfo();
         } else {
-            console.log('Ignored because game is not started yet.');
-        }        
+            logger.warn('(gameOver) Ignored because game is not started yet.');
+        }
     });
 
     socket.on('gameInfo', function () {
         io.to(socket.id).emit('gameInfo', room.game_info, room.players);
-        console.log('E: gameInfo (requested)', socket.id, room.game_info, room.players);
+        logger.debug('E: gameInfo (requested) -- playerId: %s, gameInfo: %o, players: %o', socket.id, room.game_info, room.players);
     });
 
     socket.on('dealCards', function (playerId) {
-        console.log('R: dealCards');
+        logger.debug('R: dealCards');
 
         if (room.game_info.started) {
-            console.log("Ignored because game is already started");
+            logger.warn("(dealCards) Ignored because game is already started");
             room.sendGameInfo();
             return;
         }
@@ -436,10 +445,10 @@ io.on('connection', function (socket) {
         room.sendCardShuffle();
 
         room.deck = buildTavernDeck();
-        console.log('tavern deck: ', room.deck);
+        logger.debug('tavern deck. %d cards, %o', room.deck.length, room.deck);
 
         room.castle_deck = buildCastleDeck();
-        console.log('castle deck: ', room.castle_deck);        
+        logger.debug('castle deck. %d cards, %o', room.castle_deck.length, room.castle_deck);
 
         // then for each player we deal the appropriate number of cards
         room.players.forEach(x => {
@@ -447,8 +456,10 @@ io.on('connection', function (socket) {
             for (let i = 0; i < room.getMaxHandSize(); i++)
                 hand.push(room.deck.pop());
             x.playerHand = hand;
+
+            logger.debug('Dealing %o to player %s', x.playerHand, x.playerId);
         });
-        
+
         room.setCurrentPlayer(playerId);
         room.startGame();
 
@@ -461,17 +472,17 @@ io.on('connection', function (socket) {
 
     socket.on('cardPlayed', function (cards, playerId) {
 
-        console.log('R: cardPlayed', cards, playerId);
+        logger.debug('R: cardPlayed. cards %o, playerId: %s', cards, playerId);
 
         if (playerId != room.game_info.current_player_id) {
-            console.log('discard card since not from current player');
+            logger.warn('(cardPlayed) discard card since not from current player');
             room.sendGameInfo();
             return;
         }
 
         let player = room.players.find(x => x.playerId === playerId);
         if (player === undefined) {
-            console.log('player not found', playerId, room.players);
+            logger.error('player not found -- id: %s, players: %o', playerId, room.players);
             room.sendGameInfo();
             return;
         }
@@ -483,22 +494,24 @@ io.on('connection', function (socket) {
 
             cards.forEach(cardId => {
                 player.playerHand = player.playerHand.filter(x => x !== cardId);
-                room.discard_pile.push(cardId);               
+                room.discard_pile.push(cardId);
             });
 
             io.to(playerId).emit('cardsDiscarded', cards, playerId);
-            console.log('E: cardsDiscarded', cards, playerId);
+            logger.debug('E: cardsDiscarded. playerId: %s, cards: %o', playerId, cards);
 
             //room.sendPlayerHands();
 
-            if ( room.game_info.current_player_damage <= 0 ) {
-                console.log("player soaked all the damage, next turn...");
+            if (room.game_info.current_player_damage <= 0) {
+                logger.info("Player dealt with the damage, next turn...");
                 room.nextPlayer();
                 room.sendGameInfo();
             } else if (player.playerHand.length == 0) {
+                logger.info("Player cannot deal with the damage, game over!");
                 room.sendGameOver(false);
                 room.resetGameInfo();
             } else {
+                logger.info("Player need to discard cards -- damage left: %d", room.game_info.current_player_damage);
                 room.sendGameInfo();
             }
             return;
@@ -506,7 +519,7 @@ io.on('connection', function (socket) {
 
         if (!isValidPlay(cards)) {
             // reject played cards
-            console.log('discard card since this is not a valid play/combo');
+            logger.warn('(cardPlayed) ignored card since this is not a valid play/combo. cards: %o', cards);
             room.sendGameInfo();
             return;
         }
@@ -521,21 +534,21 @@ io.on('connection', function (socket) {
 
             // we tell the client that a card was played
             io.to(room.name).emit('cardPlayed', cardId, playerId);
-            console.log('E: cardPlayed', cardId, playerId);
+            logger.debug('E: cardPlayed -- cardId: %s, playerId: %s', cardId, playerId);
         });
 
         //room.sendPlayerHands();
 
         if (hasCardSeed(cards, 'jolly')) {
 
-            console.log('Played a jolly, disabling enemy immunity');
+            logger.info('Played a jester, which disables enemy immunity');
 
             // remove immunity
             room.game_info.monster_has_immunity = false;
             // TODO. the played will need to choose the next player
             // for the moment we choose a random player
 
-            let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x=>x.playerId).slice(0));
+            let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x => x.playerId).slice(0));
             room.setCurrentPlayer(nextPlayerId);
             room.sendGameInfo();
             return;
@@ -544,12 +557,12 @@ io.on('connection', function (socket) {
         let double_damage = false;
         let apply_shield = false;
 
-        let seeds = cards.map(x=>getCardSeed(x));
+        let seeds = cards.map(x => getCardSeed(x));
         // remove duplicates
         seeds = seeds.filter((v, i, a) => a.indexOf(v) === i);
 
         if (cards.length > 1) {
-            console.log(`played ${cards.length} combo. seeds: ${seeds}`);
+            logger.debug('Played %d cards combo. seeds: %o', cards.length, seeds);
         }
 
         seeds.forEach(seed => {
@@ -561,28 +574,34 @@ io.on('connection', function (socket) {
                 // we apply the effect of the card
                 // diamonds and hearts are applied immediately
                 if (seed == 'hearts') {
-                    console.log('played hearts card, put cards from discard pile at the bottom of the tavern deck.');
+                    logger.info('Played hearts card, put cards from discard pile at the bottom of the tavern deck.');
 
                     const card_value = getCardsAttackValue(cards);
-                    console.log('card(s) value: ', card_value);
+                    logger.debug('Card(s) value: %d', card_value);
+
+                    logger.debug('Discard pile (before): %o', room.discard_pile);
+                    logger.debug('Tavern deck (before): %o', room.discard_pile);
 
                     // shuffle discard pile
                     room.discard_pile = shuffle.knuthShuffle(room.discard_pile.slice(0));
 
+                    const cards_to_move = Math.min(room.discard_pile.length, card_value);
+                    logger.info('Moving %d cards from discard pile to tavern deck...');
+
                     // put cards from the discard pile on the bottom of the deck
-                    for (let i = 0; i < card_value; i++) {
-                        if (room.discard_pile.length > 0) {
-                            room.deck.unshift(room.discard_pile.pop());
-                        } else {
-                            break;
-                        }
+                    for (let i = 0; i < cards_to_move; i++) {
+                        room.deck.unshift(room.discard_pile.pop());
                     }
+
+                    logger.debug('Discard pile (after): %o', room.discard_pile);
+                    logger.debug('Tavern deck (after): %o', room.discard_pile);
+
                 } else if (seed == 'diamonds') {
-                    console.log('played diamonds card, draw cards from tavern deck.');
+                    logger.info('Played diamonds card, draw cards from tavern deck.');
 
                     // draw cards from tavern deck and put in players hands.
-                    const playerHands = room.players.map(x=>x.playerHand.length);
-                    const playerCards = playerHands.reduce((a, b) => a+b, 0);
+                    const playerHands = room.players.map(x => x.playerHand.length);
+                    const playerCards = playerHands.reduce((a, b) => a + b, 0);
                     const maxPlayerCards = room.players.length * room.getMaxHandSize();
                     const maxDrawnCards = maxPlayerCards - playerCards;
 
@@ -591,29 +610,31 @@ io.on('connection', function (socket) {
                     let draw_card_num = Math.min(card_value, maxDrawnCards);
                     draw_card_num = Math.min(draw_card_num, room.deck.length);
 
-                    console.log('card value', card_value);
-                    console.log('maxDrawnCards', maxDrawnCards);
-                    console.log('tavern deck size', room.deck.length);
-                    console.log('draw_card_num', draw_card_num);
+                    logger.debug('Card value: %d', card_value);
+                    logger.debug('maxDrawnCards %d', maxDrawnCards);
+                    logger.debug('Tavern deck size %d', room.deck.length);
+
+                    logger.info('Drawing %d cards from tavern deck...', draw_card_num);
 
                     for (let i = 0; i < draw_card_num; i++) {
                         drawn_cards.push(room.deck.pop());
                     }
 
-                    console.log('drawn cards:', drawn_cards);
+                    logger.info('Drawn cards: %o', drawn_cards);
+                    logger.info('Dealing those cards to players...');
 
-                    while(true) {
+                    while (true) {
                         // no more card to draw
                         if (drawn_cards.length <= 0) {
                             break;
                         }
 
-                        let availablePlayers = room.players.filter(x=>x.playerHand.length < room.getMaxHandSize());
+                        let availablePlayers = room.players.filter(x => x.playerHand.length < room.getMaxHandSize());
                         if (availablePlayers.length == 0) {
                             break;
                         }
 
-                        for(let i = 0; i < availablePlayers.length; i++) {
+                        for (let i = 0; i < availablePlayers.length; i++) {
                             if (drawn_cards.length <= 0) {
                                 break;
                             }
@@ -623,23 +644,23 @@ io.on('connection', function (socket) {
 
                             // we tell the client that a card was draw
                             io.to(playerId).emit('cardDraw', card, playerId);
-                            console.log('E: cardDraw', card, playerId);
+                            logger.debug('E: cardDraw -- cardId: %s, playerId: %s', card, playerId);
                         }
                     }
 
-                    console.log('drawn cards:', drawn_cards);
+                    logger.debug('Drawn cards (after): %o', drawn_cards);
 
                     // room.sendPlayerHands();
 
                 } else if (seed == 'clubs') {
-                    console.log('played clubs card, double damage!!!');
+                    logger.info('Played clubs card, double damage!!!');
                     double_damage = true;
                 } else if (seed == 'spades') {
-                    console.log('played clubs card, shields up!');
+                    logger.info('Played clubs card, shields up!!!');
                     apply_shield = true;
                 }
             } else {
-                console.log(`The enemy is immune to "${seed}" effects!`);
+                logger.debug('The enemy is immune to %s effects!', seed);
             }
         });
 
@@ -650,34 +671,39 @@ io.on('connection', function (socket) {
         }
         room.game_info.current_inflicted_damage += card_damage;
 
-        console.log('inflicted damage to enemy.', card_damage);
-        console.log('inflicted damage to enemy. Total damage: ', room.game_info.current_inflicted_damage);
-        console.log('enemy hp remaining: ', (room.game_info.current_monster_hp-room.game_info.current_inflicted_damage));
+        logger.info(
+            'Inflicted %d damage to enemy. Total damage: %d. Hp left: %d',
+            card_damage,
+            room.game_info.current_inflicted_damage,
+            (room.game_info.current_monster_hp - room.game_info.current_inflicted_damage)
+        );
 
         // is monster dead?
         if (room.game_info.current_inflicted_damage >= room.game_info.current_monster_hp) {
             if (room.game_info.current_inflicted_damage === room.game_info.current_monster_hp) {
                 // exact kill!!! place it on top of deck
                 room.deck.push(room.game_info.current_monster);
-                console.log('Exact kill! Enemy card was placed face down on top of tavern deck!');
+                logger.info('Exact kill! Enemy card was placed face down on top of tavern deck!');
             } else {
                 // overkill
                 room.discard_pile.push(room.game_info.current_monster);
-                console.log('Enemy down! Enemy card was placed in the discard pile!');
+                logger.info('Enemy down! Enemy card was placed in the discard pile!');
             }
 
             // discard the whole board
-            while(room.game_info.board.length > 0) {
+            logger.debug('Discard the current board: %o', room.game_info.board);
+            while (room.game_info.board.length > 0) {
                 room.discard_pile.push(room.game_info.board.pop());
-                console.log('board', room.game_info.board);
-                console.log('discard pile', room.discard_pile);
             }
+            logger.debug('Board (after): %o, Discard pile: %o', room.game_info.board, room.discard_pile);
 
-            if ( room.castle_deck.length === 0 ) {
+            if (room.castle_deck.length === 0) {
+                logger.info("All enemy are dead. YOU WIN!");
                 // YOU WIN!!!
-                room.sendGameOver(true);              
+                room.sendGameOver(true);
                 room.resetGameInfo();
             } else {
+                logger.info("Proceed with next enemy.");
                 room.nextMonster();
                 room.sendGameInfo();
             }
@@ -693,11 +719,11 @@ io.on('connection', function (socket) {
 
         damage_suffered = Math.max(0, damage_suffered - room.game_info.current_shield);
 
-        console.log("player should suffer damage: ", damage_suffered);
-
-        if ( damage_suffered == 0 ) {
+        if (damage_suffered == 0) {
+            logger.info("Player sustained no damage.");
             room.nextPlayer();
         } else {
+            logger.info("Player was hit per %d damage.", damage_suffered);
             room.game_info.current_player_damage = damage_suffered;
             //io.emit('sufferDamage', playerId, damage_suffered);
         }
@@ -706,15 +732,14 @@ io.on('connection', function (socket) {
     });
 
     socket.on('disconnecting', function () {
-        console.log('User disconnecting: ', socket.id);
-        console.log('It was on rooms: ', socket.rooms);
+        logger.debug('User disconnecting -- id: %s, user rooms: %o', socket.id, socket.rooms);
 
         room.players = room.players.filter(player => player.playerId !== socket.id);
-        console.log(`room ${room.name} players.length: ${room.players.length}`);
+        logger.debug('Player room: %s left with %d players', room.name, room.players.length);
     });
 
     socket.on('disconnect', function () {
-        console.log('A user disconnected: ' + socket.id);
+        logger.debug('A user disconnected -- id: %s' + socket.id);
     });
 });
 
@@ -722,6 +747,7 @@ io.on('connection', function (socket) {
 server.use(express.static(path.join(__dirname, './client/dist')));
 
 http.listen(PORT, function () {
-    console.log('Listening on port ', http.address().port);
+    console.log('Listening on port %d', http.address().port);
+    logger.debug('Listening on port %d', http.address().port);
 });
 
