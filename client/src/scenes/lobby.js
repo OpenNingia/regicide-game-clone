@@ -61,7 +61,7 @@ export default class Lobby extends Phaser.Scene {
         /** SOCKET CODE */        
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
-            self.players = playerList.map(x => new Player(x.playerId, x.playerName));
+            self.players = playerList.map(x => new Player(x.playerId, x.playerName, x.ready));
             console.log(`players: ${self.players}`);
 
             if (self.me === null) {

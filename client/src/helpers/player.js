@@ -1,9 +1,9 @@
 export default class Player {
-    constructor(playerId, playerName) {
+    constructor(playerId, playerName, isReady = false) {
 
         this.playerId = playerId;
         this.playerName = playerName;
-        this.playerReady = false;
+        this.playerReady = isReady;
         this.playerText = null;
         this.gameObjects = [];
 

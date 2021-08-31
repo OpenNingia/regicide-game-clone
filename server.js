@@ -304,12 +304,6 @@ class Room {
         this.game_info.started = true;
     }
 
-    sendPlayerHands() {
-        // TODO. private messages
-        io.to(this.name).emit('dealCards', this.players);
-        logger.debug('E: dealCards to %o', this.players);
-    }
-
     sendCardShuffle() {
         io.to(this.name).emit('shuffleCards');
         logger.debug('E: shuffleCards');
@@ -422,6 +416,12 @@ io.on('connection', function (socket) {
         logger.debug('E: startGame. Room: %s', room.name);
     });
 
+    socket.on('canStartGame', function () {
+        const canStartGame = !room.isStarted() && room.players.length > 1;
+        io.to(socket.id).emit('canStartGame', canStartGame);
+        logger.debug('E: canStartGame. Room: %s, Value: %o', room.name, canStartGame);
+    });
+
     socket.on('gameOver', function () {
         logger.debug('R: gameOver');
 
@@ -510,8 +510,6 @@ io.on('connection', function (socket) {
             io.to(playerId).emit('cardsDiscarded', cards, playerId);
             logger.debug('E: cardsDiscarded. playerId: %s, cards: %o', playerId, cards);
 
-            //room.sendPlayerHands();
-
             if (room.game_info.current_player_damage <= 0) {
                 logger.info("Player dealt with the damage, next turn...");
                 room.nextPlayer();
@@ -546,8 +544,6 @@ io.on('connection', function (socket) {
             io.to(room.name).emit('cardPlayed', cardId, playerId);
             logger.debug('E: cardPlayed -- cardId: %s, playerId: %s', cardId, playerId);
         });
-
-        //room.sendPlayerHands();
 
         if (hasCardSeed(cards, 'jester')) {
 
@@ -660,8 +656,6 @@ io.on('connection', function (socket) {
 
                     logger.debug('Drawn cards (after): %o', drawn_cards);
 
-                    // room.sendPlayerHands();
-
                 } else if (seed == 'clubs') {
                     logger.info('Played clubs card, double damage!!!');
                     double_damage = true;
@@ -746,6 +740,10 @@ io.on('connection', function (socket) {
 
         room.players = room.players.filter(player => player.playerId !== socket.id);
         logger.debug('Player room: %s left with %d players', room.name, room.players.length);
+
+        // send game over
+        room.sendGameOver(false);
+        room.resetGameInfo();
     });
 
     socket.on('disconnect', function () {

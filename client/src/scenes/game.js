@@ -149,6 +149,12 @@ export default class Game extends Phaser.Scene {
 
             console.log('Received gameInfo event', gameInfo, players);
 
+            if (players.length !== self.players.length) {
+                // go back to lobby
+                self.scene.start('Lobby', { socket: self.socket, players: self.players, me: self.me });
+                return;
+            }
+
             self.dealer.dealCards(players);
 
             self.dropZone.data.values.cards.forEach(x=>x.destroy());
@@ -208,7 +214,7 @@ export default class Game extends Phaser.Scene {
 
             // HP and damage
             let remainingHp = gameInfo.current_monster_hp-gameInfo.current_inflicted_damage;
-            let remainingDmg = gameInfo.current_monster_attack-gameInfo.current_shield;
+            let remainingDmg = Math.max(0, gameInfo.current_monster_attack-gameInfo.current_shield);
 
             const hpDmgString = `HP ${remainingHp}/${gameInfo.current_monster_hp} | DMG ${remainingDmg}/${gameInfo.current_monster_attack}`;
             let hpDmgTextObj = self.add.text((self.castleZoneObj.x-50), (self.castleZoneObj.y+100), [hpDmgString]).setFontSize(16).setFontFamily('CompassPro').setColor('#00ffff');
@@ -229,6 +235,11 @@ export default class Game extends Phaser.Scene {
 
             self.playCardsBtn.setVisible(isMyTurn && doIHaveAnyCards);
             self.passTurnBtn.setVisible(isMyTurn);
+
+            const isGameStarted = gameInfo.started;
+            const enoughPlayers = players.length > 1;
+            self.dealBtn.setEnabled(!isGameStarted && enoughPlayers);
+            self.abortBtn.setEnabled(isGameStarted);
 
             if (isMyTurn) {
                 console.log("ITS MY TURN!!!");
