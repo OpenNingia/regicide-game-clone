@@ -1,0 +1,41 @@
+{
+  "icons": [
+    {
+      "src": "icon_512x512.7b766c56ac2ce362bc21d9dd7d2a4298.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_384x384.f6e08c0472bebc5f114b7b7f42aa7686.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_256x256.1200ff0f4aa8e34d92df0e8d2f4b2673.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_192x192.768b0ff840a43133c6c58b44da4a55b6.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_128x128.cfbe22c6ef93702079859971da3cc46a.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_96x96.01803d9aa67793c14b749a87315eabd4.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    }
+  ],
+  "name": "Regicide Clone",
+  "short_name": "Regicide",
+  "orientation": "portrait",
+  "display": "standalone",
+  "start_url": ".",
+  "description": "A digital clone of the regicide board game.",
+  "background_color": "#ffffff"
+}

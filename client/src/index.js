@@ -4,6 +4,17 @@ import Lobby from "./scenes/lobby";
 import Game from "./scenes/game";
 import GameOver from "./scenes/gameover";
 
+// SERVICE WORKER -- NEEDED FOR PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+            console.log('SW registered: ', registration);
+        }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+        });
+    });
+}
+
 const config = {
     type: Phaser.AUTO,
     parent: "regicide_game",
@@ -23,7 +34,7 @@ const config = {
         width: 1280,
         height: 720,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-    },        
+    },
 };
 
 const game = new Phaser.Game(config);

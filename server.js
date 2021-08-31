@@ -528,7 +528,7 @@ io.on('connection', function (socket) {
 
             // apply potential shield
             room.game_info.current_shield = room.game_info.potential_shield;
-
+            
             // TODO. the played will need to choose the next player
             // for the moment we choose a random player
 
