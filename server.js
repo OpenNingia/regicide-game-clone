@@ -15,33 +15,13 @@ const { uniqueNamesGenerator, adjectives, colors, animals } = require('unique-na
 //const { PRIORITY_NORMAL } = require('constants');
 
 const pino = require('pino');
+const { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } = require('constants');
 
 // Create a logging instance
 const logger = pino({
     //level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     level: 'trace'
 });
-
-/*
-const winston = require('winston');
-
-const logger = winston.createLogger({
-    level: 'debug',
-    format: winston.format.combine(
-        winston.format.timestamp({
-            format: 'YYYY-MM-DD HH:mm:ss'
-        }),
-        winston.format.errors({ stack: true }),
-        winston.format.splat(),
-        winston.format.prettyPrint()
-    ),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: 'server.log' })
-    ]
-});*/
-
-// const { runInThisContext } = require('vm');
 
 const MAX_HAND_SIZES = [0, 0, 7, 6, 5];
 
@@ -66,6 +46,7 @@ class GameInfo {
         this.current_monster_hp = 0;
         this.current_inflicted_damage = 0;
         this.current_monster_attack = 0;
+        this.potential_shield = 0;
         this.current_shield = 0;
         this.monster_has_immunity = true;
         this.tavern_deck_size = 0;
@@ -258,11 +239,9 @@ function buildTavernDeck(playersCount) {
     return shuffle.knuthShuffle(my_deck.slice(0));
 }
 
-
 function hasCardSeed(cards, seed) {
     return cards.some(x => getCardSeed(x) == seed);
 }
-
 //
 
 class Room {
@@ -328,6 +307,7 @@ class Room {
         // set the current monster
         this.game_info.current_monster = this.castle_deck.pop();
         this.game_info.current_monster_hp = getMonsterMaxHp(this.game_info.current_monster);
+        this.game_info.potential_shield = 0;
         this.game_info.current_shield = 0;
         this.game_info.current_inflicted_damage = 0;
         this.game_info.current_monster_attack = getCardAttackValue(this.game_info.current_monster);
@@ -545,6 +525,10 @@ io.on('connection', function (socket) {
 
             // remove immunity
             room.game_info.monster_has_immunity = false;
+
+            // apply potential shield
+            room.game_info.current_shield = room.game_info.potential_shield;
+
             // TODO. the played will need to choose the next player
             // for the moment we choose a random player
 
@@ -570,10 +554,15 @@ io.on('connection', function (socket) {
             // STEP 2 (activate power)
             // if monster has immunity to that seed
             // no effect is applied
+
+            if (getCardSeed(room.game_info.current_monster) === 'spades') {
+                room.game_info.potential_shield += getCardsAttackValue(cards);
+            }
+
             if ((getCardSeed(room.game_info.current_monster) != seed) || !room.game_info.monster_has_immunity) {
                 // we apply the effect of the card
                 // diamonds and hearts are applied immediately
-                if (seed == 'hearts') {
+                if (seed === 'hearts') {
                     logger.info('Played hearts card, put cards from discard pile at the bottom of the tavern deck.');
 
                     const card_value = getCardsAttackValue(cards);
@@ -596,7 +585,7 @@ io.on('connection', function (socket) {
                     logger.debug('Discard pile (after): %o', room.discard_pile);
                     logger.debug('Tavern deck (after): %o', room.discard_pile);
 
-                } else if (seed == 'diamonds') {
+                } else if (seed === 'diamonds') {
                     logger.info('Played diamonds card, draw cards from tavern deck.');
 
                     // draw cards from tavern deck and put in players hands.
@@ -650,10 +639,10 @@ io.on('connection', function (socket) {
 
                     logger.debug('Drawn cards (after): %o', drawn_cards);
 
-                } else if (seed == 'clubs') {
+                } else if (seed === 'clubs') {
                     logger.info('Played clubs card, double damage!!!');
                     double_damage = true;
-                } else if (seed == 'spades') {
+                } else if (seed === 'spades') {
                     logger.info('Played clubs card, shields up!!!');
                     apply_shield = true;
                 }
@@ -711,8 +700,9 @@ io.on('connection', function (socket) {
 
         // STEP 4 suffer damage
         let damage_suffered = getCardAttackValue(room.game_info.current_monster);
+
         if (apply_shield) {
-            room.game_info.current_shield += getCardsAttackValue(cards);
+            room.game_info.current_shield = room.game_info.potential_shield;
         }
 
         damage_suffered = Math.max(0, damage_suffered - room.game_info.current_shield);
@@ -752,4 +742,3 @@ http.listen(PORT, function () {
     console.log('Listening on port %d', http.address().port);
     logger.debug('Listening on port %d', http.address().port);
 });
-
