@@ -416,12 +416,6 @@ io.on('connection', function (socket) {
         logger.debug('E: startGame. Room: %s', room.name);
     });
 
-    socket.on('canStartGame', function () {
-        const canStartGame = !room.isStarted() && room.players.length > 1;
-        io.to(socket.id).emit('canStartGame', canStartGame);
-        logger.debug('E: canStartGame. Room: %s, Value: %o', room.name, canStartGame);
-    });
-
     socket.on('gameOver', function () {
         logger.debug('R: gameOver');
 
