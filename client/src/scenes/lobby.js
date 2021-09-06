@@ -28,7 +28,7 @@ export default class Lobby extends Phaser.Scene {
         this.players = [];
         this.amReady = false;
 
-        this.waitText = this.add.text(75, 350, ['IN ATTESA DI GIOCATORI...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
+        this.waitText = this.add.text(75, 350, ['SELEZIONA UNA STANZA...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
         
         let stdButtonConfig = {
             enabled: true,
@@ -53,12 +53,41 @@ export default class Lobby extends Phaser.Scene {
 
         let startBtn = new Button(this, {...stdButtonConfig}).setEnabled(false).onClick(function() {
             self.socket.emit('startGame');
-        });       
+        }).setEnabled(false);  
 
         let readyBtnObj = readyBtn.render(75, 650, ['[] SONO PRONTO']);
-        let startBtnObj = startBtn.render(350, 650, ['[INIZIAMO!]']);        
+        let startBtnObj = startBtn.render(350, 650, ['[INIZIAMO!]']);
+
+
+        // room list
+        const windowBox = this.add.rectangle(1000, 360, 500, 400, 0xffffff, 0.4);
+        const windowTitleBox = this.add.rectangle(1000, 185, 500, 50, 0xff000f, 0.4).setDepth(1);
+        const title = this.add.text(790, 175, ['STANZE DISPONIBILI']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setDepth(2);
+        const roomButtonList = []
+        const roomButtonGroup = this.add.group();
+
 
         /** SOCKET CODE */        
+        this.socket.on('roomInfo', function (roomList) {
+            console.log('roomInfo', roomList);
+            let i = 0;
+            roomList.forEach(r => {
+
+                let btn = new Button(self, {...stdButtonConfig}).setEnabled(false).onClick(function() {
+                    console.log(`Joining room: ${r.name}`);
+                    self.socket.emit('playerJoin', r.name); 
+                })                
+                roomButtonList.push(btn);
+
+                let btnObj = btn.render(850, 250+(i++*50), `[${r.name}]`);
+
+                btn.setEnabled(r.isAvailable);
+                roomButtonGroup.add(btnObj, false);
+        
+            });            
+
+        });
+
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
             self.players = playerList.map(x => new Player(x.playerId, x.playerName, x.ready));
@@ -72,6 +101,12 @@ export default class Lobby extends Phaser.Scene {
                 console.log(`Joined player: ${playerId} as ${playerName}`);
             }
 
+            self.updatePlayerList();
+        });
+
+        this.socket.on('playerLeave', function(playerId) {
+            console.log(`Player left: ${playerId}`);
+            self.players = self.players.filter(x=>x.playerId!==playerId);
             self.updatePlayerList();
         });
 
@@ -93,6 +128,7 @@ export default class Lobby extends Phaser.Scene {
         this.events.on('shutdown', function() {
             console.log("(LOBBY SCENE) SHUTDOWN");
 
+            self.socket.off('roomInfo');
             self.socket.off('playerJoin');
             self.socket.off('playerReady');
             self.socket.off('canStartGame');
@@ -104,7 +140,7 @@ export default class Lobby extends Phaser.Scene {
             startBtnObj.destroy();
         });        
 
-        this.socket.emit('playerJoin');        
+        this.socket.emit('roomInfo');        
     }
 
     updatePlayerList() {

@@ -243,6 +243,18 @@ function hasCardSeed(cards, seed) {
     return cards.some(x => getCardSeed(x) == seed);
 }
 //
+class RoomInfo {
+    constructor(name) {
+        this.name = name;
+        this.isAvailable = true;        
+    }
+
+    static fromRoom(theRoom) {
+        let info = new RoomInfo(theRoom.name);
+        info.isAvailable = !theRoom.isFull() && !theRoom.isStarted();
+        return info;
+    }
+}
 
 class Room {
     constructor(name) {
@@ -337,9 +349,22 @@ class Room {
     getMaxHandSize() {
         return MAX_HAND_SIZES[this.players.length];
     }
+
+    removePlayer(playerId) {
+        this.players = this.players.filter(player => player.playerId !== playerId);
+        io.to(this.name).emit('playerLeave', playerId);
+        logger.debug('E: playerLeave -- room: %s, player: %s', this.name, playerId);        
+    }
+
+    addPlayer(player) {
+        this.players.push(player);
+        io.to(this.name).emit('playerJoin', player.playerId, player.playerName, this.players);
+        logger.debug('E: playerJoin -- id: %s, name: %s, players: %o', player.playerId, player.playerName, this.players);
+    }
 }
 
 const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
+const DEFAULT_ROOM = new Room('DEFAULT');
 
 function getFreeRoom() {
     let freeRooms = ROOMS.filter(x => !x.isFull() && !x.isStarted());
@@ -348,9 +373,43 @@ function getFreeRoom() {
     return freeRooms[0];
 }
 
+function joinTheRoom(socket, player, roomName) {
+    let new_room = ROOMS.find(x=>x.name===roomName);
+    if (!new_room || new_room.isFull() || new_room.isStarted())
+        return false;
+
+    // check if the player is in another room
+    let old_room = ROOMS.find(x=>x.players.indexOf(player) >= 0);
+
+    if (old_room) {
+
+        if (new_room.name == old_room.name) {
+            return false;
+        }
+
+        // leave room
+        socket.leave(old_room.name);
+        old_room.removePlayer(player.playerId);
+    }
+    // then join the new room
+    new_room = ROOMS.find(x=>x.name===roomName);
+    if (new_room) {
+        socket.join(new_room.name);
+        new_room.addPlayer(player);        
+    }
+    return true;
+}
+
+function getDefaultRoom() {
+    return DEFAULT_ROOM;
+}
+
 io.on('connection', function (socket) {
     logger.debug('A user connected: %s', socket.id);
 
+    let room = getDefaultRoom();
+    
+    /*
     const room = getFreeRoom();
     if (room === null) {
         logger.debug('connection refused!');
@@ -358,8 +417,12 @@ io.on('connection', function (socket) {
         return;
     }
 
-    socket.join(room.name);
+    socket.join(room);
     logger.debug('room %s players.length: %d', room.name, (room.players.length + 1));
+    */
+
+    socket.join(room);
+    logger.debug('Player entering the default room.');
 
     // e.g. BigRedDonkey
     const uniqueName = uniqueNamesGenerator({
@@ -369,13 +432,32 @@ io.on('connection', function (socket) {
     });
 
     let player = new Player(socket.id, uniqueName);
-    room.players.push(player);
+    //room.players.push(player);
 
+    socket.on('roomInfo', function () {
+        logger.debug('R: roomInfo -- id: %s', socket.id);
+        // emit the available rooms
+        const roomsInfo = ROOMS.map(x=>RoomInfo.fromRoom(x));
+        io.to(socket.id).emit('roomInfo', roomsInfo);
+        logger.debug('E: roomInfo -- rooms: %o', roomsInfo);
+    });
+
+    socket.on('playerJoin', function(roomName) {
+        logger.debug('R: playerJoin -- id: %s, roomName: %s', socket.id, roomName);
+        
+        if (joinTheRoom(socket, player, roomName)) {
+            // change room
+            room = ROOMS.find(x=>x.name===roomName);
+        }
+    });
+
+    /*
     socket.on('playerJoin', function () {
         logger.debug('R: playerJoin -- id: %s', socket.id);
         io.to(room.name).emit('playerJoin', socket.id, uniqueName, room.players);
         logger.debug('E: playerJoin -- id: %s, name: %s, players: %o', socket.id, uniqueName, room.players);
     });
+    */
 
     socket.on('playerReady', function (isReady) {
         logger.debug('R: playerReady -- id: %s, ready: %o', socket.id, isReady);
@@ -442,6 +524,8 @@ io.on('connection', function (socket) {
 
         room.castle_deck = buildCastleDeck();
         logger.debug('castle deck. %d cards, %o', room.castle_deck.length, room.castle_deck);
+
+        room.discard_pile = [];
 
         // then for each player we deal the appropriate number of cards
         room.players.forEach(x => {
