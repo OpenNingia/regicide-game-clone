@@ -246,12 +246,14 @@ function hasCardSeed(cards, seed) {
 class RoomInfo {
     constructor(name) {
         this.name = name;
+        this.playerCount = 0;
         this.isAvailable = true;        
     }
 
     static fromRoom(theRoom) {
         let info = new RoomInfo(theRoom.name);
         info.isAvailable = !theRoom.isFull() && !theRoom.isStarted();
+        info.playerCount = theRoom.players.length;
         return info;
     }
 }
@@ -363,15 +365,16 @@ class Room {
     }
 }
 
-const ROOMS = [new Room('ROOM1'), new Room('ROOM2'), new Room('ROOM3'), new Room('ROOM4')]
+const ROOMS = [new Room('BEER'), new Room('POET'), new Room('IDEA'), new Room('MATH'), new Room('SONG'), new Room('WOOD')]
 const DEFAULT_ROOM = new Room('DEFAULT');
 
+/*
 function getFreeRoom() {
     let freeRooms = ROOMS.filter(x => !x.isFull() && !x.isStarted());
     if (freeRooms.length == 0)
         return null;
     return freeRooms[0];
-}
+}*/
 
 function joinTheRoom(socket, player, roomName) {
     let new_room = ROOMS.find(x=>x.name===roomName);
@@ -448,6 +451,11 @@ io.on('connection', function (socket) {
         if (joinTheRoom(socket, player, roomName)) {
             // change room
             room = ROOMS.find(x=>x.name===roomName);
+
+            // send unsolicited roomInfo to everyone
+            const roomsInfo = ROOMS.map(x=>RoomInfo.fromRoom(x));
+            io.emit('roomInfo', roomsInfo);
+            logger.debug('E: roomInfo -- rooms: %o', roomsInfo);
         }
     });
 

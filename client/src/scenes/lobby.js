@@ -71,20 +71,34 @@ export default class Lobby extends Phaser.Scene {
         this.socket.on('roomInfo', function (roomList) {
             console.log('roomInfo', roomList);
             let i = 0;
-            roomList.forEach(r => {
 
-                let btn = new Button(self, {...stdButtonConfig}).setEnabled(false).onClick(function() {
-                    console.log(`Joining room: ${r.name}`);
-                    self.socket.emit('playerJoin', r.name); 
-                })                
-                roomButtonList.push(btn);
+            // create
+            if (roomButtonList.length == 0) {
+                roomList.forEach(r => {
 
-                let btnObj = btn.render(850, 250+(i++*50), `[${r.name}]`);
+                    let btn = new Button(self, {...stdButtonConfig}).setEnabled(false).onClick(function() {
+                        console.log(`Joining room: ${r.name}`);
+                        self.socket.emit('playerJoin', r.name); 
+                    })
+                    btn.data = r.name;
+                    roomButtonList.push(btn);
 
-                btn.setEnabled(r.isAvailable);
-                roomButtonGroup.add(btnObj, false);
-        
-            });            
+                    let btnObj = btn.render(850, 250+(i++*50), `[${r.name} (${r.playerCount} giocatori)]`);
+
+                    btn.setEnabled(r.isAvailable);
+                    roomButtonGroup.add(btnObj, false);
+            
+                });   
+            } else {
+                // update
+                roomButtonList.forEach(b => {
+                    const room = roomList.find(x=>x.name===b.data);
+                    if (room) {
+                        b.setText(`[${room.name} (${room.playerCount} giocatori)]`)
+                        b.setEnabled(room.isAvailable);
+                    }
+                });
+            }
 
         });
 
