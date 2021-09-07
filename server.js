@@ -472,7 +472,10 @@ io.on('connection', function (socket) {
         io.to(room.name).emit('playerReady', socket.id, isReady);
         logger.debug('E: playerReady -- id: %s, ready: %o', socket.id, isReady);
 
-        room.players.find(x => x.playerId == socket.id).ready = isReady;
+        let player = room.players.find(x => x.playerId == socket.id);
+        if (player) {
+            player.ready = isReady;
+        }        
 
         // check if every player is ready
         const readyNess = room.players.map(x => x.ready);
