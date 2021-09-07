@@ -185,7 +185,7 @@ export default class Game extends Phaser.Scene {
 
                 let gameObject = card.render(
                     gameObjectX, gameObjectY,
-                    0.6,
+                    1.0,
                     false,
                     sprite);
 
