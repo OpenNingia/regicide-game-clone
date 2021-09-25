@@ -1,5 +1,5 @@
 import io from 'socket.io-client';
-import { setupBackground } from '../helpers/util';
+import { setupBackground, setupViewport } from '../helpers/util';
 
 export default class Boot extends Phaser.Scene {
     constructor() {
@@ -112,8 +112,12 @@ export default class Boot extends Phaser.Scene {
     }
 
     create() {
-        let self = this;        
+        let self = this;
 
+        // handle resize
+        window.addEventListener('resize', ()=>setupViewport(this.sys.game));
+        
+        setupViewport(this.sys.game);
         setupBackground(this);
 
         // cursor

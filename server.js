@@ -448,7 +448,9 @@ io.on('connection', function (socket) {
         logger.debug('R: playerJoin -- id: %s, name: %s, roomName: %s', socket.id, playerName, roomName);
 
         // set the playerName
-        player.playerName = playerName;
+        if (playerName) {
+            player.playerName = playerName;
+        }
         
         if (joinTheRoom(socket, player, roomName)) {
             // change room

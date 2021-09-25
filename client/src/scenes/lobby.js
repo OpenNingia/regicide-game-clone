@@ -60,10 +60,23 @@ export default class Lobby extends Phaser.Scene {
 
         let startBtn = new Button(this, {...stdButtonConfig}).setEnabled(false).onClick(function() {
             self.socket.emit('startGame');
-        }).setEnabled(false);  
+        }).setEnabled(false);
+
+        let fullScreenBtn = new Button(this, {...stdButtonConfig}).setEnabled(true).onClick(function() {
+            const canvas = self.sys.game.canvas;
+            const isFullScreen = document.fullscreenElement === canvas;
+            if (isFullScreen) {                
+                document[self.sys.game.device.fullscreen.cancel]();
+                fullScreenBtn.setText(['[] SCHERMO INTERO'])
+            } else {
+                canvas[self.sys.game.device.fullscreen.request]();
+                fullScreenBtn.setText(['[X] SCHERMO INTERO'])
+            }
+        }).setEnabled(true);          
 
         let readyBtnObj = readyBtn.render(75, 650, ['[] SONO PRONTO']);
-        let startBtnObj = startBtn.render(350, 650, ['[INIZIAMO!]']);
+        let startBtnObj = startBtn.render(350, 650, ['INIZIAMO!']);
+        let fullScreenBtnObj = fullScreenBtn.render(625, 650, ['[] SCHERMO INTERO']);
 
 
         // room list
@@ -162,6 +175,7 @@ export default class Lobby extends Phaser.Scene {
 
             readyBtnObj.destroy();
             startBtnObj.destroy();
+            fullScreenBtnObj.destroy();
         });        
 
         this.socket.emit('roomInfo');        

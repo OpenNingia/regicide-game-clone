@@ -30,7 +30,19 @@ export function setupBackground(scene) {
 
     createAligned(scene, totalWidth, 'bg1', 0.0);
     createAligned(scene, totalWidth, 'bg2', 0.25);
-    createAligned(scene, totalWidth, 'bg2', 0.5);    
+    createAligned(scene, totalWidth, 'bg2', 0.5);
+}
+
+export function setupViewport(game) {
+    var canvas = game.canvas, width = window.innerWidth, height = window.innerHeight;
+    var wratio = width / height, ratio = canvas.width / canvas.height;
+    if (wratio < ratio) {
+        canvas.style.width = width + "px";
+        canvas.style.height = (width / ratio) + "px";
+    } else {
+        canvas.style.width = (height * ratio) + "px";
+        canvas.style.height = height + "px";
+    }
 }
 
 export function randomChoose(choose_array) {
