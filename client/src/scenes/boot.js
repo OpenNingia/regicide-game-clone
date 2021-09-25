@@ -79,11 +79,11 @@ export default class Boot extends Phaser.Scene {
 
         this.load.image('card-blank', 'src/assets/cards/card-blank.png');
 
-        // particles
-        this.load.image('fire', 'src/assets/muzzleflash3.png');
-
-        // old scroll
-        this.load.image('old-scroll', 'src/assets/old_scroll_dark.png');
+        // game ui
+        this.load.image('old-scroll', 'src/assets/adom-oga-ui.png');
+        this.load.image('button-full', 'src/assets/button-full.png');
+        this.load.image('button-short', 'src/assets/button-short.png');
+        this.load.image('frame', 'src/assets/frame.png');
 
         // sound effects
         this.load.audio('card-shuffle', 'src/assets/audio/sfx/cardShuffle.wav');
@@ -112,7 +112,7 @@ export default class Boot extends Phaser.Scene {
     }
 
     create() {
-        let self = this;
+        let self = this;        
 
         setupBackground(this);
 
@@ -134,6 +134,7 @@ export default class Boot extends Phaser.Scene {
         this.socket.on('connect', function () {
         	console.log('Connected!');
             self.scene.start('Lobby', { socket: self.socket });
+            //self.scene.start('Game', { socket: self.socket });
         });
 
         this.events.on('shutdown', function() {

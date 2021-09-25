@@ -29,16 +29,18 @@ export default class Lobby extends Phaser.Scene {
         this.amReady = false;
         this.selectedRoom = '';
 
-        this.waitText = this.add.text(75, 350, ['SELEZIONA UNA STANZA...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
+        this.waitText = this.add.text(500, 75, ['SELEZIONA UNA STANZA...'])
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setOrigin(0);
         
         let stdButtonConfig = {
             enabled: true,
             visible: true,
-            color: '#00ffff',
-            hoveringColor: '#ff69b4',
-            disabledColor: '#eee',
-            fontSize: 32,
-            fontFamily: 'CompassPro'
+            color: '#492811',
+            hoveringColor: '#FFAE00',
+            disabledColor: '#222',
+            fontSize: 16,
+            fontFamily: 'CompassPro',
+            texture: 'button-full'
         };        
 
         this.roomButtonList = []
@@ -65,9 +67,11 @@ export default class Lobby extends Phaser.Scene {
 
 
         // room list
-        const windowBox = this.add.rectangle(1000, 360, 500, 400, 0xffffff, 0.4);
-        const windowTitleBox = this.add.rectangle(1000, 185, 500, 50, 0xff000f, 0.4).setDepth(1);
-        const title = this.add.text(790, 175, ['STANZE DISPONIBILI']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setDepth(2);
+        const windowBox = this.add.image(75, 150, 'frame').setDisplaySize(310, 400).setDepth(0).setOrigin(0);
+        //const windowTitleBox = this.add.rectangle(75, 160, 310, 50, 0xff000f, 0.4).setDepth(1).setOrigin(0);
+        const title = this.add.text(120, 170, ['Stanze disponibili']).setFontSize(32).setFontFamily('CompassPro').setColor('#F2DDCC').setDepth(2);
+
+        let playerName = prompt('Inserisci il tuo nome');
 
         /** SOCKET CODE */        
         this.socket.on('roomInfo', function (roomList) {
@@ -80,7 +84,7 @@ export default class Lobby extends Phaser.Scene {
 
                     let btn = new Button(self, {...stdButtonConfig}).setEnabled(false).onClick(function() {
                         console.log(`Joining room: ${r.name}`);
-                        self.socket.emit('playerJoin', r.name); 
+                        self.socket.emit('playerJoin', playerName, r.name); 
 
                         readyBtn.setEnabled(true);
 
@@ -89,7 +93,7 @@ export default class Lobby extends Phaser.Scene {
                     btn.data = r.name;
                     self.roomButtonList.push(btn);
 
-                    let btnObj = btn.render(850, 250+(i++*50), `[${r.name} (${r.playerCount} giocatori)]`);
+                    let btnObj = btn.render(105, 220+(i++*50), `${r.name} (${r.playerCount} giocatori)`);
 
                     btn.setEnabled(r.isAvailable);
                     roomButtonGroup.add(btnObj, false);
@@ -100,7 +104,7 @@ export default class Lobby extends Phaser.Scene {
                 self.roomButtonList.forEach(b => {
                     const room = roomList.find(x=>x.name===b.data);
                     if (room) {
-                        b.setText(`[${room.name} (${room.playerCount} giocatori)]`)
+                        b.setText(`${room.name} (${room.playerCount} giocatori)`)
                         b.setEnabled(room.isAvailable);
                     }
                 });

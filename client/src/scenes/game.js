@@ -62,24 +62,25 @@ export default class Game extends Phaser.Scene {
         let stdButtonConfig = {
             enabled: true,
             visible: true,
-            color: '#00ffff',
+            color: '#492811',
             hoveringColor: '#ff69b4',
-            disabledColor: '#eee',
-            fontSize: 32,
-            fontFamily: 'CompassPro',            
+            disabledColor: '#203542',
+            fontSize: 16,
+            fontFamily: 'CompassPro',
+            texture: 'button-short'
         };
 
         // BOTTONE NUOVA PARTITA / DAI CARTE
         this.dealBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
             self.socket.emit("dealCards", self.me.playerId);
         }); 
-        this.dealBtn.render(75, 275, ['[NUOVA]', '[PARTITA]']);
+        this.dealBtn.render(50, 300, ['NUOVA PARTITA']);
 
         // BOTTONE MANDA A MONTE
         this.abortBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
             self.socket.emit("gameOver");
         }); 
-        this.abortBtn.render(75, 375, ['[A MONTE]']);
+        this.abortBtn.render(50, 370, ['A MONTE']);
 
         // BOTTONE GIOCA CARTE
         this.playCardsBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
@@ -91,10 +92,10 @@ export default class Game extends Phaser.Scene {
         this.passTurnBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
             self.passTurn();
         }).setVisible(false); 
-        this.passTurnBtn.render(690, 650, ['[PASSA]']);
+        this.passTurnBtn.render(740, 650, ['[PASSA]']);
 
-        this.yourTurnText = this.add.text(75, 580, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
-        this.damageText = this.add.text(75, 580, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
+        this.yourTurnText = this.add.text(50, 480, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
+        this.damageText = this.add.text(50, 480, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
             .setFontSize(24).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(false);
 
         // castle deck
@@ -110,7 +111,7 @@ export default class Game extends Phaser.Scene {
         this.dropZone = this.zone.renderZone();
         this.dropZone.data.values.cards = [];
 
-        this.zoneBg = this.add.image(550, 300, 'old-scroll');
+        this.zoneBg = this.add.image(590, 300, 'old-scroll');
         this.zoneBg.setScale(0.3).setDepth(0);
 
         this.castleZone = new CastleZone(this);

@@ -15,7 +15,6 @@ const { uniqueNamesGenerator, adjectives, colors, animals } = require('unique-na
 //const { PRIORITY_NORMAL } = require('constants');
 
 const pino = require('pino');
-const { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } = require('constants');
 
 // Create a logging instance
 const logger = pino({
@@ -445,8 +444,11 @@ io.on('connection', function (socket) {
         logger.debug('E: roomInfo -- rooms: %o', roomsInfo);
     });
 
-    socket.on('playerJoin', function(roomName) {
-        logger.debug('R: playerJoin -- id: %s, roomName: %s', socket.id, roomName);
+    socket.on('playerJoin', function(playerName, roomName) {
+        logger.debug('R: playerJoin -- id: %s, name: %s, roomName: %s', socket.id, playerName, roomName);
+
+        // set the playerName
+        player.playerName = playerName;
         
         if (joinTheRoom(socket, player, roomName)) {
             // change room
