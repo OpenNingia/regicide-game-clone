@@ -19,9 +19,10 @@ export default class Boot extends Phaser.Scene {
         // progress bar
         this.createProgressbar(gameConfig.centerX, gameConfig.centerY, 500, 20);
 
-		this.load.image('bg1', 'src/assets/bg/far.png');
-		this.load.image('bg2', 'src/assets/bg/sand.png');
-		this.load.image('bg3', 'src/assets/bg/foregound-merged.png');
+        this.load.image('bg1', 'src/assets/bg/mountains.jpg');
+		//this.load.image('bg1', 'src/assets/bg/far.png');
+		//this.load.image('bg2', 'src/assets/bg/sand.png');
+		//this.load.image('bg3', 'src/assets/bg/foregound-merged.png');
 
         this.load.image('card-back1', 'src/assets/cards/card-back1.png');
         this.load.image('card-back2', 'src/assets/cards/card-back2.png');
@@ -129,6 +130,7 @@ export default class Boot extends Phaser.Scene {
         
         setupViewport(this.sys.game);
         setupBackground(this);
+        //const m = this.add.image(0, this.scale.height, 'bg1');
 
         // cursor
         this.input.setDefaultCursor('url(src/assets/cursors/sword.cur), pointer');

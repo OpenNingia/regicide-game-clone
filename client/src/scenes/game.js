@@ -102,9 +102,9 @@ export default class Game extends Phaser.Scene {
         // discard pile
         // tavern deck
         this.deckLabel = this.add.text(1050, 70, ['TAVERNA', 'SCARTI', 'CASTELLO'])
-            .setFontSize(16).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(true);
-        this.deckText = this.add.text(1130, 70, ['', '', ''])
-            .setFontSize(16).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(true);
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(true);
+        this.deckText = this.add.text(1180, 70, ['', '', ''])
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(true);
 
 
         this.zone = new Zone(this);
