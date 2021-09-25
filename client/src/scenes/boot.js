@@ -9,6 +9,16 @@ export default class Boot extends Phaser.Scene {
     }
 
     preload() {
+
+        let gameConfig = this.sys.game.config;
+        gameConfig.gameTitle = "Regicide Clone";
+        gameConfig.gameVersion = "0.1.0";
+        gameConfig.centerX = gameConfig.width / 2;
+        gameConfig.centerY = gameConfig.height / 2;
+
+        // progress bar
+        this.createProgressbar(gameConfig.centerX, gameConfig.centerY, 500, 20);
+
 		this.load.image('bg1', 'src/assets/bg/far.png');
 		this.load.image('bg2', 'src/assets/bg/sand.png');
 		this.load.image('bg3', 'src/assets/bg/foregound-merged.png');
@@ -123,9 +133,17 @@ export default class Boot extends Phaser.Scene {
         // cursor
         this.input.setDefaultCursor('url(src/assets/cursors/sword.cur), pointer');
 
-        let dealText = this.add.text(75, 350, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
+        let dealText = this.add.text(75, 450, ['CONNESSIONE AL SERVER...']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff');
 
+        this.events.on('shutdown', function() {
+            console.log("(BOOT SCENE) SHUTDOWN");
+            dealText.destroy();
+        });
+    }
+
+    createSocket() {
         /** SOCKET CODE */
+        let self = this;
 
         if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
             // dev code
@@ -140,11 +158,66 @@ export default class Boot extends Phaser.Scene {
             self.scene.start('Lobby', { socket: self.socket });
             //self.scene.start('Game', { socket: self.socket });
         });
-
-        this.events.on('shutdown', function() {
-            console.log("(BOOT SCENE) SHUTDOWN");
-            dealText.destroy();
-        });
     }
 
+
+    createProgressbar(x, y, width, height){
+        // Create text
+        const styleText = {
+            fill: 'black'
+        };
+        const loadingText = {
+            x: x,
+            y: y - 15,
+            text: "Caricamento...",
+            style: styleText
+        };
+        this.make.text(loadingText)
+            .setOrigin(0.5);
+
+        // Size and position
+        this.width = width;
+        this.height = height;
+        this.xStart = x - this.width / 2;
+        this.yStart = y - this.height / 2;
+        this.color = 0xaaaaaa;
+
+        // Border size
+        let borderOffset = 2;
+
+        let borderRect = new Phaser.Geom.Rectangle(
+            this.xStart - borderOffset,
+            this.yStart - borderOffset,
+            this.width + borderOffset * 2,
+            this.height + borderOffset * 2
+        );
+
+        let border = this.add.graphics({
+            lineStyle: {
+                width: 2,
+                color: this.color
+            }
+        });
+        border.strokeRectShape(borderRect);
+
+        this.progressBar = this.add.graphics();
+        
+        // Implementation
+        this.load.on('progress', this.updateProgressbar.bind(this));
+
+        this.load.once('complete', () => {
+            this.load.off('progress', this.updateProgressbar.bind(this));
+            this.progressBar.destroy();
+            this.createSocket();
+            // this.scene.start('MainScene', this.config);
+        });
+
+    }
+
+    updateProgressbar(percentage){
+        // console.log(`Now Loading: ${parseInt(percentage * 100)}%`);
+        this.progressBar.clear();
+        this.progressBar.fillStyle(this.color, 1);
+        this.progressBar.fillRect(this.xStart, this.yStart, percentage * this.width, this.height);
+    }    
 }
