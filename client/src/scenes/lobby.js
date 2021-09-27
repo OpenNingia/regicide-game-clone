@@ -1,7 +1,7 @@
-import Player from '../helpers/player';
-import io from 'socket.io-client';
+import PlayerModel from '../models/playerModel'
 import { setupBackground } from '../helpers/util';
 import Button from '../helpers/button';
+import Frame from '../helpers/frame';
 
 export default class Lobby extends Phaser.Scene {
     constructor() {
@@ -13,7 +13,7 @@ export default class Lobby extends Phaser.Scene {
 
     init(data) {
         console.log(`init lobby scene. ${data}`);
-        this.socket = data.socket;
+        this.socket = data.socket;        
     }
 
     preload() {
@@ -37,16 +37,16 @@ export default class Lobby extends Phaser.Scene {
             visible: true,
             color: '#492811',
             hoveringColor: '#FFAE00',
-            disabledColor: '#222',
-            fontSize: 16,
+            disabledColor: '#888',
+            fontSize: 32,
             fontFamily: 'CompassPro',
-            texture: 'button-full'
+            texture: 'button-full',
+            textureScale: 0.5
         };        
+        
+        this.roomButtonGroup = this.add.group();
 
-        this.roomButtonList = []
-        const roomButtonGroup = this.add.group();
-
-        let readyBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+        let readyBtn = new Button(this, {...stdButtonConfig}, 20, 620, ['[] SONO PRONTO']).onClick(function() {
             self.amReady = !self.amReady;
             self.socket.emit('playerReady', self.amReady);
             
@@ -58,11 +58,11 @@ export default class Lobby extends Phaser.Scene {
 
         }).setEnabled(false);
 
-        let startBtn = new Button(this, {...stdButtonConfig}).setEnabled(false).onClick(function() {
+        let startBtn = new Button(this, {...stdButtonConfig}, 435, 620, ['INIZIAMO!']).setEnabled(false).onClick(function() {
             self.socket.emit('startGame');
         }).setEnabled(false);
 
-        let fullScreenBtn = new Button(this, {...stdButtonConfig}).setEnabled(true).onClick(function() {
+        let fullScreenBtn = new Button(this, {...stdButtonConfig}, 850, 620, ['[] SCHERMO INTERO']).setEnabled(true).onClick(function() {
             const canvas = self.sys.game.canvas;
             const isFullScreen = document.fullscreenElement === canvas;
             if (isFullScreen) {                
@@ -74,15 +74,12 @@ export default class Lobby extends Phaser.Scene {
             }
         }).setEnabled(true);          
 
-        let readyBtnObj = readyBtn.render(75, 650, ['[] SONO PRONTO']);
-        let startBtnObj = startBtn.render(350, 650, ['INIZIAMO!']);
-        let fullScreenBtnObj = fullScreenBtn.render(625, 650, ['[] SCHERMO INTERO']);
-
-
         // room list
-        const windowBox = this.add.image(75, 150, 'frame').setDisplaySize(310, 400).setDepth(0).setOrigin(0);
-        //const windowTitleBox = this.add.rectangle(75, 160, 310, 50, 0xff000f, 0.4).setDepth(1).setOrigin(0);
-        const title = this.add.text(120, 170, ['Stanze disponibili']).setFontSize(32).setFontFamily('CompassPro').setColor('#F2DDCC').setDepth(2);
+        let roomFrame = new Frame(this, 20, 10, 600, 605, ['Stanze disponibili']);
+
+        this.controls = this.add.group([readyBtn, startBtn, fullScreenBtn]);
+        this.controls.runChildUpdate = true;
+        this.roomButtonGroup.runChildUpdate = true;
 
         let playerName = prompt('Inserisci il tuo nome');
 
@@ -92,10 +89,12 @@ export default class Lobby extends Phaser.Scene {
             let i = 0;
 
             // create
-            if (self.roomButtonList.length == 0) {
+            if (self.roomButtonGroup.getLength() == 0) {
                 roomList.forEach(r => {
 
-                    let btn = new Button(self, {...stdButtonConfig}).setEnabled(false).onClick(function() {
+                    let margin = 5;
+                    let btnSize = 80;
+                    let btn = new Button(self, {...stdButtonConfig}, 110, 85+(i++*btnSize+margin), `${r.name} (${r.playerCount} giocatori)`).setEnabled(false).onClick(function() {
                         console.log(`Joining room: ${r.name}`);
                         self.socket.emit('playerJoin', playerName, r.name); 
 
@@ -103,19 +102,15 @@ export default class Lobby extends Phaser.Scene {
 
                         self.selectedRoom = r.name;
                     })
-                    btn.data = r.name;
-                    self.roomButtonList.push(btn);
-
-                    let btnObj = btn.render(105, 220+(i++*50), `${r.name} (${r.playerCount} giocatori)`);
-
+                    btn.name = r.name;
                     btn.setEnabled(r.isAvailable);
-                    roomButtonGroup.add(btnObj, false);
+                    self.roomButtonGroup.add(btn, false);
             
                 });   
             } else {
                 // update
-                self.roomButtonList.forEach(b => {
-                    const room = roomList.find(x=>x.name===b.data);
+                self.roomButtonGroup.getChildren().forEach(b => {
+                    const room = roomList.find(x=>x.name===b.name);
                     if (room) {
                         b.setText(`${room.name} (${room.playerCount} giocatori)`)
                         b.setEnabled(room.isAvailable);
@@ -127,8 +122,8 @@ export default class Lobby extends Phaser.Scene {
 
 		this.socket.on('playerJoin', function (playerId, playerName, playerList) {
 
-            self.players = playerList.map(x => new Player(x.playerId, x.playerName, x.ready));
-            console.log(`players: ${self.players}`);
+            self.players = playerList.map(x => new PlayerModel(x.playerId, x.playerName, x.ready));
+            self.players.forEach(x=>console.log(x));
 
             if (self.me === null) {
                 // this is me!
@@ -167,16 +162,19 @@ export default class Lobby extends Phaser.Scene {
 
             self.socket.off('roomInfo');
             self.socket.off('playerJoin');
+            self.socket.off('playerLeave');
             self.socket.off('playerReady');
             self.socket.off('canStartGame');
             self.socket.off('startGame');            
 
             self.waitText.destroy();
-
-            readyBtnObj.destroy();
-            startBtnObj.destroy();
-            fullScreenBtnObj.destroy();
+            self.controls.destroy();
+            self.roomButtonGroup.destroy();
         });        
+
+        // DEBUG: grid
+        // this.grid = this.add.grid(0, 0, this.sys.game.config.width, this.sys.game.config.height, 50, 50, null, null, 0, 0.2).setOrigin(0);
+
 
         this.socket.emit('roomInfo');        
     }
@@ -185,18 +183,14 @@ export default class Lobby extends Phaser.Scene {
         // enable all buttons but this
         const room = this.selectedRoom;
         const self = this;
-        this.roomButtonList.forEach(b=>{
+        this.roomButtonGroup.getChildren().forEach(b=>{
             if (self.amReady) {
                 b.setEnabled(false);
             } else {
                 // if we're ready we should disable room selection
-                b.setEnabled(b.data !== room);
+                b.setEnabled(b.name !== room);
             }
         })
-
-        
-        
-
     }
 
     updatePlayerList() {

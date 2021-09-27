@@ -1,9 +1,12 @@
 import Card from '../helpers/card';
 import Zone from '../helpers/zone';
 import CastleZone from '../helpers/castleZone';
-import Dealer from '../helpers/dealer';
+import PlayerHand from '../helpers/playerHand';
 import Button from '../helpers/button';
+import Frame from '../helpers/frame';
 import { setupBackground, randomChoose } from '../helpers/util';
+import Opponent from '../helpers/opponent';
+import { getCardString } from '../helpers/cardText';
 
 export default class Game extends Phaser.Scene {
     constructor() {
@@ -17,7 +20,7 @@ export default class Game extends Phaser.Scene {
         console.log(data);
         this.socket = data.socket;
         this.players = data.players;
-        this.me = data.me;
+        this.me = data.me;        
     }
 
     preload() {
@@ -63,82 +66,126 @@ export default class Game extends Phaser.Scene {
             enabled: true,
             visible: true,
             color: '#492811',
-            hoveringColor: '#ff69b4',
-            disabledColor: '#203542',
-            fontSize: 16,
+            hoveringColor: '#FFAE00',
+            disabledColor: '#888',
+            fontSize: 24,
             fontFamily: 'CompassPro',
-            texture: 'button-short'
+            texture: 'button-short',
+            textureScale: 0.4
         };
 
         // BOTTONE NUOVA PARTITA / DAI CARTE
-        this.dealBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+        this.dealBtn = new Button(this, {...stdButtonConfig}, 20, 370, ['NUOVA PARTITA']).onClick(function() {
             self.socket.emit("dealCards", self.me.playerId);
-        }); 
-        this.dealBtn.render(50, 300, ['NUOVA PARTITA']);
+        });                 
 
         // BOTTONE MANDA A MONTE
-        this.abortBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+        this.abortBtn = new Button(this, {...stdButtonConfig}, 280, 370, ['A MONTE']).onClick(function() {
             self.socket.emit("gameOver");
-        }); 
-        this.abortBtn.render(50, 370, ['A MONTE']);
+        });         
 
         // BOTTONE GIOCA CARTE
-        this.playCardsBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
+        this.playCardsBtn = new Button(this, {...stdButtonConfig}, 20, 600, ['[GIOCA]']).onClick(function() {
             self.playCards();
         }).setVisible(false); 
-        this.playCardsBtn.render(530, 650, ['[GIOCA]']);
-        
+       
         // BOTTONE PASSA TURNO
-        this.passTurnBtn = new Button(this, {...stdButtonConfig}).onClick(function() {
-            self.passTurn();
+        this.passTurnBtn = new Button(this, {...stdButtonConfig}, 280, 600, ['[PASSA]']).onClick(function() {
+            self.passTurn();            
         }).setVisible(false); 
-        this.passTurnBtn.render(740, 650, ['[PASSA]']);
 
-        this.yourTurnText = this.add.text(50, 480, ['È IL TUO TURNO!']).setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(false);
-        this.damageText = this.add.text(50, 480, ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'])
-            .setFontSize(24).setFontFamily('CompassPro').setColor('#ff69b4').setVisible(false);
+        // FRAME MESSAGGI
+        let msgFrame = new Frame(this, 840, 400, 420, 300, []).setDepth(0);
 
-        // castle deck
-        // discard pile
-        // tavern deck
-        this.deckLabel = this.add.text(1050, 70, ['TAVERNA', 'SCARTI', 'CASTELLO'])
-            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(true);
-        this.deckText = this.add.text(1180, 70, ['', '', ''])
-            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setVisible(true);
+        //this.dmgText = ['HAI SUBITO DANNI!', 'SCARTA ABBASTANZA CARTE', 'PER CONTINUARE'];
+        this.textColor = '#F2DDCC';
+        this.dmgTextColor = '#FF5B00';
 
+        this.messageArea = this.add.rexBBCodeText(860, 420, '', 
+            { 
+                fontFamily: 'CompassPro', 
+                fontSize: 32, 
+                color: '#F2DDCC',
+                wrap: {
+                    mode: 'word',
+                    width: 400
+                },                
+            });       
 
+        // FRAME MAZZI
+        let deckFrame = new Frame(this, 940, 115, 320, 250, ['Mazzi']).setDepth(0);
+
+        // NOMI MAZZI CASTELLO, SCARTI E TAVERNA
+        this.deckLabel = this.add.text(980, 200, ['Taverna', 'Scarti', 'Castello'])
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#F2DDCC').setVisible(true);
+        // CONTEGGIO MAZZI
+        this.deckText = this.add.text(1180, 200, ['', '', ''])
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#FFDDCC').setVisible(true);
+
+        // CARD DROP ZONE
         this.zone = new Zone(this);
         this.dropZone = this.zone.renderZone();
         this.dropZone.data.values.cards = [];
 
-        this.zoneBg = this.add.image(590, 300, 'old-scroll');
-        this.zoneBg.setScale(0.3).setDepth(0);
-
+        // ZONA DEL CASTELLO
         this.castleZone = new CastleZone(this);
         this.castleZoneObj = this.castleZone.renderZone();
+        let castleSeparator = this.add.graphics()
+            .setDepth(2)
+            .lineStyle(4, 0xD0A880)
+            .beginPath()
+            .moveTo(750, 130)
+            .lineTo(750, 350)
+            .closePath()
+            .strokePath();
+        
+        this.controls = this.add.group([this.dealBtn, this.abortBtn, this.playCardsBtn, this.passTurnBtn]);
+        this.controls.runChildUpdate = true;
 
-        //this.outline = this.zone.renderOutline(this.dropZone);
-        //this.castleOutline = this.castleZone.renderOutline(this.castleZoneObj);
+        // create other players
+        let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
+
+        let columns = [30, 330, 630];
+        let cardBacks = ['card-back2', 'card-back3', 'card-back4']
+        let index = 0;
+        
+        this.playersGroup =  this.add.group(
+            otherPlayers.map(p=>{
+                const x = columns[index];
+                const cb = cardBacks[index];
+                index++;
+                return new Opponent(self, p, cb, x, 20);
+            })    
+        );
+        this.playersGroup.runChildUpdate = true;        
+
+        // DRAW MY NAME
+        let myName = this.add
+            .text(20, 690, [self.me.playerName])
+            .setFontSize(24)
+            .setFontFamily('CompassPro')
+            .setColor('#eeffff');  
+
+        this.boardGroup = this.add.group();
+        this.messageLog = [];
+        this.lastGameInfo = null;
 
         /** SOCKET CODE */
 
-        // remove listeners to avoid listening multiple time to the same events
         this.socket.off('dealCards');
+        this.socket.off('shuffleCards');
         this.socket.off('gameInfo');
-        this.socket.off('gameOver');
-
+        this.socket.off('nextPlayer');
         this.socket.off('cardPlayed');
         this.socket.off('cardDraw');
-        this.socket.off('cardsDiscarded');
-
-        this.socket.off('shuffleCards');
-
+        this.socket.off('cardDiscarded');
+        this.socket.off('gameOver');
+        this.socket.off('enemyKilled');   
 
         // we receive also the event for the other players
         // this is not very cheat-proof :D
 		this.socket.on('dealCards', function (players) {
             console.log('Received dealCards event', players);            
-            //self.dealer.dealCards(players);
         })   
 
 		this.socket.on('shuffleCards', function () {
@@ -156,24 +203,15 @@ export default class Game extends Phaser.Scene {
                 return;
             }
 
-            self.dealer.dealCards(players);
-
-            self.dropZone.data.values.cards.forEach(x=>x.destroy());
-            self.dropZone.data.values.cards = [];
-
-            // update players
-            let otherPlayers = self.players.filter(x=>x.playerId != self.me.playerId);
-            self.playerSlots.forEach(x=>x.destroy());
-            self.playerSlots = [];
-
-            let xx = [30, 330, 630];
-            let ii = 0;
-            otherPlayers.forEach(x=>{
-                const my_xx = xx[ii++];
-                const is_current_player = gameInfo.current_player_id === x.playerId;
-                self.playerSlots.push(x.render(self, my_xx, 30, is_current_player));
+            // update player hands
+            self.me.playerHand = players.find(p=>p.playerId===self.me.playerId).playerHand;
+            self.players.forEach(p=>{
+                p.playerHand = players.find(x=>x.playerId===p.playerId).playerHand;
             });
-            self.playerSlots.push(self.me.render(self, 30, 690));
+
+            //self.dropZone.data.values.cards.forEach(x=>x.destroy());
+            //self.dropZone.data.values.cards = [];
+            self.boardGroup.clear(true, true);
 
             // update board
             gameInfo.board.forEach(cardId => {
@@ -181,8 +219,8 @@ export default class Game extends Phaser.Scene {
                 let card = new Card(self, cardId);
                 let sprite = self.dealer.getSprite(cardId);
 
-                let gameObjectX = ((self.dropZone.x - 250) + ((self.dropZone.data.values.cards.length+1) * 50));
-                let gameObjectY = (self.dropZone.y);
+                let gameObjectX = 30 + self.dropZone.x + ((self.boardGroup.getLength()+1) * 50);
+                let gameObjectY = 125 + self.dropZone.y;
 
                 let gameObject = card.render(
                     gameObjectX, gameObjectY,
@@ -191,7 +229,9 @@ export default class Game extends Phaser.Scene {
                     sprite);
 
                 gameObject.disableInteractive();
-                self.dropZone.data.values.cards.push(gameObject);
+                self.boardGroup.add(gameObject);
+
+                console.log(`Place card ${cardId} into board at ${gameObjectX}, ${gameObjectY} with texture ${sprite}`);
             });
 
             // update castle
@@ -217,22 +257,37 @@ export default class Game extends Phaser.Scene {
             let remainingHp = gameInfo.current_monster_hp-gameInfo.current_inflicted_damage;
             let remainingDmg = Math.max(0, gameInfo.current_monster_attack-gameInfo.current_shield);
 
-            const hpDmgString = `HP ${remainingHp}/${gameInfo.current_monster_hp} | DMG ${remainingDmg}/${gameInfo.current_monster_attack}`;
-            let hpDmgTextObj = self.add.text((self.castleZoneObj.x-50), (self.castleZoneObj.y+100), [hpDmgString]).setFontSize(16).setFontFamily('CompassPro').setColor('#00ffff');
-            self.castleZoneObj.data.values.objects.push(hpDmgTextObj);
+            const hpString = `HP ${remainingHp}/${gameInfo.current_monster_hp}`;
+            const dmgString = `DMG ${remainingDmg}/${gameInfo.current_monster_attack}`;
+            let hpTextObj = self.add.text((self.castleZoneObj.x-50), (self.castleZoneObj.y+80), [hpString, dmgString])
+                .setFontSize(32)
+                .setFontFamily('CompassPro')
+                .setColor('#492811');
+
+            self.castleZoneObj.data.values.objects.push(hpTextObj);
 
             // update decks
             self.deckText.setText([`(${gameInfo.tavern_deck_size})`, `(${gameInfo.discard_pile_size})`, `(${gameInfo.castle_deck_size})`])
             //
 
+            // update current player 
+            self.players.forEach(x=>{
+                if (x.playerId!==gameInfo.current_player_id) {
+                    x.activePlayer = false;
+                } else {
+                    x.activePlayer = true;
+                }
+            });
+
+            const currentPlayer = players.find(x=>x.playerId===gameInfo.current_player_id);
+
             const isMyTurn = gameInfo.current_player_id == self.me.playerId;
-            const doIHaveAnyCards = self.me.gameObjects.length > 0;
+            const myHand = players.find(x=>x.playerId === self.me.playerId).playerHand;
+
+            const doIHaveAnyCards = myHand.length > 0;
             const doIHaveDamage = gameInfo.current_player_damage > 0;
 
-            self.setHandInteractive(isMyTurn);
-
-            self.yourTurnText.setVisible(isMyTurn);
-            self.damageText.setVisible(false);
+            self.dealer.setHandInteractive(isMyTurn);
 
             self.playCardsBtn.setVisible(isMyTurn && doIHaveAnyCards);
             self.passTurnBtn.setVisible(isMyTurn);
@@ -242,21 +297,25 @@ export default class Game extends Phaser.Scene {
             self.dealBtn.setEnabled(!isGameStarted && enoughPlayers);
             self.abortBtn.setEnabled(isGameStarted);
 
-            if (isMyTurn) {
-                console.log("ITS MY TURN!!!");
-
-                if ( doIHaveDamage ) {
-                    self.damageText.setText(['HAI SUBITO DANNI!', `SCARTA ${gameInfo.current_player_damage}`, 'PER CONTINUARE']);
-                    self.damageText.setVisible(true);
-                    self.yourTurnText.setVisible(false);
+            // if changed player then we need to tell the players
+            if (currentPlayer && (gameInfo.current_player_id !== this.lastGameInfo?.current_player_id)) {
+                if (isMyTurn) {
+                    self.addToLog('[u]È il tuo turno![/u]');
+                } else {
+                    self.addToLog(`È il turno di [color=green]${currentPlayer.playerName}[/color]`);
                 }
             }
+
+            if (doIHaveDamage) {
+                self.addToLog(`[color=#FF5B00]HAI SUBITO DANNI! SCARTA ${gameInfo.current_player_damage} PER CONTINUARE[/color]`);
+            }
+
+            this.lastGameInfo = gameInfo;
         })
 
         this.socket.on('nextPlayer', function () {
             console.log('Received nextPlayer event');
-            // I need to choose the next player
-            
+            // I need to choose the next player            
             self.scene.pause().launch('SelectPlayer', { socket: self.socket, players: self.players });
         })
 
@@ -283,34 +342,67 @@ export default class Game extends Phaser.Scene {
             }
         });
 
+        this.socket.on('enemyKilled', function(enemy, playerId, isExactKill) {
+            let message = "";
+            let enemyString = getCardString(enemy);
+
+            if (playerId === self.me.playerId) {
+                message = `Hai ucciso [b]${enemyString}[/b].`;
+            } else {
+                message = `${playerId} ha ucciso [b]${enemyString}[/b].`;
+            }
+
+            if (isExactKill) {
+                message += ' Uccisione perfetta!';
+            }
+
+            if (playerId === self.me.playerId) {
+                message += ' Gioca ancora.';
+            }
+
+            self.addToLog(message);
+        });        
+
         /** END SOCKET CODE */
 
-        this.dealer = new Dealer(this);
+        this.dealer = new PlayerHand(this, 20, 450);
+
+        // DEBUG: grid
+        // this.grid = this.add.grid(0, 0, this.sys.game.config.width, this.sys.game.config.height, 50, 50, null, null, 0, 0.2).setOrigin(0);
 
         // request game information
         this.socket.emit('gameInfo');
     }
 
-    update() {
+    update() {        
+        this.dealer.update();
 
+        // update messageLog
+        this.messageArea.setText(this.messageLog);
     }
 
-    setHandInteractive(flag) {
-        if ( this.me !== null ) {
-            if (flag) {
-                this.me.gameObjects.forEach(x=>x.setInteractive());
-            } else {
-                this.me.gameObjects.forEach(x=>x.disableInteractive());
-            }
-        }
+    shutdown() {
+        // remove listeners to avoid listening multiple time to the same events
+        this.socket.off('dealCards');
+        this.socket.off('shuffleCards');
+        this.socket.off('gameInfo');
+        this.socket.off('nextPlayer');
+        this.socket.off('cardPlayed');
+        this.socket.off('cardDraw');
+        this.socket.off('cardDiscarded');
+        this.socket.off('gameOver');
+        this.socket.off('enemyKilled');        
+        
+        self.controls.destroy();
     }
 
     playCards() {
         if ( this.me !== null ) {
-            let cards = this.me.gameObjects.filter(x=>x.selected === true).map(y=>y.cardId);
+            let cards = this.dealer.getSelectedCards();
 
             if (this.canPlayCards(cards)) {
                 this.socket.emit('cardPlayed', cards, this.me.playerId);
+                this.dealer.clearSelectedCards();
             }
         }
     }
@@ -318,10 +410,19 @@ export default class Game extends Phaser.Scene {
     passTurn() {
         if ( this.me !== null ) {
             this.socket.emit('cardPlayed', [], this.me.playerId);
+            this.dealer.clearSelectedCards();
         }
-    }    
+    }
 
     canPlayCards(cards) {
         return cards.length > 0;
+    }
+
+    addToLog(text) {
+        const MaxLines = 3;
+        if (this.messageLog.length > MaxLines) {
+            this.messageLog.shift();
+        }
+        this.messageLog.push(text);
     }
 }

@@ -277,8 +277,8 @@ class Room {
 
     resetGameInfo() {
         this.game_info = new GameInfo();
-        this.game_info.tavern_deck_size = this.deck.length;
-        this.game_info.castle_deck_size = this.castle_deck.size;
+        this.game_info.tavern_deck_size = this.deck?.length ?? 0;
+        this.game_info.castle_deck_size = this.castle_deck?.size ?? 0;
         this.game_info.discard_pile_size = 0;
         this.game_info.started = false;
 
@@ -302,9 +302,9 @@ class Room {
     }
 
     sendGameInfo() {
-        this.game_info.castle_deck_size = this.castle_deck.length;
-        this.game_info.tavern_deck_size = this.deck.length;
-        this.game_info.discard_pile_size = this.discard_pile.length;
+        this.game_info.castle_deck_size = this.castle_deck?.length ?? 0;
+        this.game_info.tavern_deck_size = this.deck?.length ?? 0;
+        this.game_info.discard_pile_size = this.discard_pile?.length ?? 0;
 
         io.to(this.name).emit('gameInfo', this.game_info, this.players);
         logger.debug('E: gameInfo -- gameInfo: %o, players: %o', this.game_info, this.players);
@@ -314,6 +314,11 @@ class Room {
         this.game_info.started = false;
         io.to(this.name).emit('gameOver', victory);
         logger.debug('E: gameOver -- %o', victory);
+    }
+
+    sendEnemyKill(enemy, playerId, exact) {
+        io.to(this.name).emit('enemyKilled', enemy, playerId, exact);
+        logger.debug('E: enemyKilled -- enemy: %s, player: %s, exact: %o', enemy, playerId, exact);
     }
 
     nextMonster() {
@@ -637,13 +642,6 @@ io.on('connection', function (socket) {
             // apply potential shield
             room.game_info.current_shield = room.game_info.potential_shield;
             
-            // TODO. the played will need to choose the next player
-            // for the moment we choose a random player
-
-            //let [nextPlayerId] = shuffle.knuthShuffle(room.players.map(x => x.playerId).slice(0));
-            //room.setCurrentPlayer(nextPlayerId);
-            //room.sendGameInfo();
-
             // ask the current player to choose the next
             io.to(socket.id).emit('nextPlayer');
             logger.debug('E: nextPlayer');            
@@ -731,6 +729,7 @@ io.on('connection', function (socket) {
                             break;
                         }
 
+                        // eslint-disable-next-line no-loop-func
                         let availablePlayers = room.players.filter(x => x.playerHand.length < room.getMaxHandSize());
                         if (availablePlayers.length == 0) {
                             break;
@@ -784,10 +783,12 @@ io.on('connection', function (socket) {
                 // exact kill!!! place it on top of deck
                 room.deck.push(room.game_info.current_monster);
                 logger.info('Exact kill! Enemy card was placed face down on top of tavern deck!');
+                room.sendEnemyKill(room.game_info.current_monster, playerId, true);
             } else {
                 // overkill
                 room.discard_pile.push(room.game_info.current_monster);
                 logger.info('Enemy down! Enemy card was placed in the discard pile!');
+                room.sendEnemyKill(room.game_info.current_monster, playerId, false);
             }
 
             // discard the whole board

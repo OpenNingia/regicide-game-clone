@@ -211,7 +211,6 @@ export default class Boot extends Phaser.Scene {
             this.load.off('progress', this.updateProgressbar.bind(this));
             this.progressBar.destroy();
             this.createSocket();
-            // this.scene.start('MainScene', this.config);
         });
 
     }

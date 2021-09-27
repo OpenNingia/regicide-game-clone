@@ -1,8 +1,17 @@
 export default class Zone {
     constructor(scene) {
         this.renderZone = () => {
-            let dropZone = scene.add.zone(550, 300, 600, 250).setRectangleDropZone(600, 250);
+            let x = 20;
+            let y = 110;
+            let w = 900;
+            let h = 250;
+
+            let dropZone = scene.add.zone(x, y, w, h).setRectangleDropZone(w, h);
             dropZone.setData({ cards: [] });
+
+            let zoneBg = scene.add.image(x, y, 'old-scroll')
+                                 .setScale(0.4, 0.3).setDepth(0).setOrigin(0);
+   
             return dropZone;
         };
         this.renderOutline = (dropZone) => {            	    			

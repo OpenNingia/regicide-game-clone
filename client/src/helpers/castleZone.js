@@ -1,7 +1,9 @@
 export default class CastleZone {
     constructor(scene) {
         this.renderZone = () => {
-            let dropZone = scene.add.zone(1000, 300, 300, 250).setRectangleDropZone(300, 250);
+            let dropZone = scene.add.zone(815, 210, 300, 250)
+                .setOrigin(0)
+                .setRectangleDropZone(300, 250);
             dropZone.setData({ objects: [] });
             return dropZone;
         };

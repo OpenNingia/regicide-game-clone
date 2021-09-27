@@ -4,6 +4,7 @@ import Lobby from "./scenes/lobby";
 import Game from "./scenes/game";
 import GameOver from "./scenes/gameover";
 import SelectPlayer from "./scenes/selectplayer";
+import BBCodeTextPlugin from 'phaser3-rex-plugins/plugins/bbcodetext-plugin.js';
 
 // SERVICE WORKER -- NEEDED FOR PWA
 if ('serviceWorker' in navigator) {
@@ -37,6 +38,13 @@ const config = {
         height: 720,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
+    plugins: {
+        global: [{
+            key: 'rexBBCodeTextPlugin',
+            plugin: BBCodeTextPlugin,
+            start: true
+        }]
+    }
 };
 
 const game = new Phaser.Game(config);
