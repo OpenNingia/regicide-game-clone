@@ -29,8 +29,8 @@ export default class Lobby extends Phaser.Scene {
         this.amReady = false;
         this.selectedRoom = '';
 
-        this.waitText = this.add.text(500, 75, ['SELEZIONA UNA STANZA...'])
-            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setOrigin(0);
+        /*this.waitText = this.add.text(500, 75, ['SELEZIONA UNA STANZA...'])
+            .setFontSize(32).setFontFamily('CompassPro').setColor('#00ffff').setOrigin(0);*/
         
         let stdButtonConfig = {
             enabled: true,
@@ -167,7 +167,7 @@ export default class Lobby extends Phaser.Scene {
             self.socket.off('canStartGame');
             self.socket.off('startGame');            
 
-            self.waitText.destroy();
+            //self.waitText.destroy();
             self.controls.destroy();
             self.roomButtonGroup.destroy();
         });        
@@ -195,6 +195,6 @@ export default class Lobby extends Phaser.Scene {
 
     updatePlayerList() {
         let playerNames = this.players.map(x=>`> [${x.playerReady ? 'X' : ''}] ${x.playerName}`);
-        this.waitText.setText(['IN ATTESA DI GIOCATORI...'].concat(playerNames));        
+        //this.waitText.setText(['IN ATTESA DI GIOCATORI...'].concat(playerNames));        
     }
 }
