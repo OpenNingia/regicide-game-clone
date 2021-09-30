@@ -301,6 +301,11 @@ class Room {
         logger.debug('E: shuffleCards');
     }
 
+    sendCardsDiscarded(cards, playerId) {
+        io.to(this.name).emit('cardsDiscarded', cards, playerId);
+        logger.debug('E: cardsDiscarded. playerId: %s, cards: %o', playerId, cards);
+    }
+
     sendGameInfo() {
         this.game_info.castle_deck_size = this.castle_deck?.length ?? 0;
         this.game_info.tavern_deck_size = this.deck?.length ?? 0;
@@ -319,6 +324,11 @@ class Room {
     sendEnemyKill(enemy, playerId, exact) {
         io.to(this.name).emit('enemyKilled', enemy, playerId, exact);
         logger.debug('E: enemyKilled -- enemy: %s, player: %s, exact: %o', enemy, playerId, exact);
+    }
+
+    sendSufferedDamage(damage, playerId) {
+        io.to(this.name).emit('sufferDamage', damage, playerId);
+        logger.debug('E: sufferDamage -- player: %s, damage: %d', playerId, damage);
     }
 
     nextMonster() {
@@ -371,14 +381,6 @@ class Room {
 
 const ROOMS = [new Room('BEER'), new Room('POET'), new Room('IDEA'), new Room('MATH'), new Room('SONG'), new Room('WOOD')]
 const DEFAULT_ROOM = new Room('DEFAULT');
-
-/*
-function getFreeRoom() {
-    let freeRooms = ROOMS.filter(x => !x.isFull() && !x.isStarted());
-    if (freeRooms.length == 0)
-        return null;
-    return freeRooms[0];
-}*/
 
 function joinTheRoom(socket, player, roomName) {
     let new_room = ROOMS.find(x=>x.name===roomName);
@@ -454,7 +456,7 @@ io.on('connection', function (socket) {
 
         // set the playerName
         if (playerName) {
-            player.playerName = playerName;
+            player.playerName = `${playerName}#${socket.id.substring(0, 4)}`;
         }
         
         if (joinTheRoom(socket, player, roomName)) {
@@ -467,14 +469,6 @@ io.on('connection', function (socket) {
             logger.debug('E: roomInfo -- rooms: %o', roomsInfo);
         }
     });
-
-    /*
-    socket.on('playerJoin', function () {
-        logger.debug('R: playerJoin -- id: %s', socket.id);
-        io.to(room.name).emit('playerJoin', socket.id, uniqueName, room.players);
-        logger.debug('E: playerJoin -- id: %s, name: %s, players: %o', socket.id, uniqueName, room.players);
-    });
-    */
 
     socket.on('playerReady', function (isReady) {
         logger.debug('R: playerReady -- id: %s, ready: %o', socket.id, isReady);
@@ -594,8 +588,7 @@ io.on('connection', function (socket) {
                 room.discard_pile.push(cardId);
             });
 
-            io.to(playerId).emit('cardsDiscarded', cards, playerId);
-            logger.debug('E: cardsDiscarded. playerId: %s, cards: %o', playerId, cards);
+            room.sendCardsDiscarded(cards, playerId);
 
             if (room.game_info.current_player_damage <= 0) {
                 logger.info("Player dealt with the damage, next turn...");
@@ -744,7 +737,7 @@ io.on('connection', function (socket) {
                             availablePlayers[i].playerHand.push(card);
 
                             // we tell the client that a card was draw
-                            io.to(playerId).emit('cardDraw', card, playerId);
+                            io.to(playerId).emit('cardDraw', card, availablePlayers[i].playerId);
                             logger.debug('E: cardDraw -- cardId: %s, playerId: %s', card, playerId);
                         }
                     }
@@ -827,7 +820,7 @@ io.on('connection', function (socket) {
         } else {
             logger.info("Player was hit per %d damage.", damage_suffered);
             room.game_info.current_player_damage = damage_suffered;
-            //io.emit('sufferDamage', playerId, damage_suffered);
+            room.sendSufferedDamage(damage_suffered, playerId);            
         }
 
         room.sendGameInfo();

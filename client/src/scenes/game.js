@@ -300,14 +300,16 @@ export default class Game extends Phaser.Scene {
             // if changed player then we need to tell the players
             if (currentPlayer && (gameInfo.current_player_id !== this.lastGameInfo?.current_player_id)) {
                 if (isMyTurn) {
-                    self.addToLog('[u]È il tuo turno![/u]');
+                    self.addToLog('[color=green]È il tuo turno![/color]');
                 } else {
                     self.addToLog(`È il turno di [color=green]${currentPlayer.playerName}[/color]`);
                 }
             }
 
             if (doIHaveDamage) {
-                self.addToLog(`[color=#FF5B00]HAI SUBITO DANNI! SCARTA ${gameInfo.current_player_damage} PER CONTINUARE[/color]`);
+                if (isMyTurn) {
+                    self.addToLog(`[color=#FF5B00]HAI SUBITO DANNI! SCARTA ${gameInfo.current_player_damage} PER CONTINUARE[/color]`);
+                }
             }
 
             this.lastGameInfo = gameInfo;
@@ -321,17 +323,46 @@ export default class Game extends Phaser.Scene {
 
         this.socket.on('cardPlayed', function (cardId, playerId) {
             console.log('Received cardPlayed event', cardId, playerId);
-            randomChoose(self.card_place_sfx).play();            
+            randomChoose(self.card_place_sfx).play();
+
+            if (playerId !== self.me.playerId) {
+                const playerName = self.getPlayer(playerId).playerName;
+                const cardName = getCardString(cardId);
+                self.addToLog(`${playerName} ha giocato ${cardName}`);
+            }
         })
 
         this.socket.on('cardDraw', function (cardId, playerId) {
             console.log('Received cardDraw event', cardId, playerId);
             randomChoose(self.card_shove_sfx).play();
+
+            const cardName = getCardString(cardId);
+            if (playerId === self.me.playerId) {
+                self.addToLog(`Hai pescato ${cardName}`);
+            }
         })
+
+        this.socket.on('sufferDamage', function (damage, playerId) {
+            console.log('Received sufferDamage event', damage, playerId);
+            // TODO. damage suffered sfx randomChoose(self.card_shove_sfx).play();
+
+            if (playerId !== self.me.playerId) {    
+                const playerName = self.getPlayer(playerId).playerName;                        
+                self.addToLog(`[color=#FF5B00]${playerName} ha subito ${damage} danni.[/color]`);
+            }
+        })        
 
         this.socket.on('cardsDiscarded', function (cards, playerId) {
             console.log('Received cardsDiscarded event', cards, playerId);
             randomChoose(self.card_shove_sfx).play();
+
+            if (playerId !== self.me.playerId) {
+                const playerName = self.getPlayer(playerId).playerName;
+                cards.forEach(x=>{
+                    const cardName = getCardString(x);
+                    self.addToLog(`${playerName} ha scartato ${cardName}`);
+                });
+            }            
         })        
 
         this.socket.on('gameOver', function(youWin) {
@@ -343,24 +374,22 @@ export default class Game extends Phaser.Scene {
         });
 
         this.socket.on('enemyKilled', function(enemy, playerId, isExactKill) {
-            let message = "";
-            let enemyString = getCardString(enemy);
+            const enemyString = getCardString(enemy);
+            const playerName = self.getPlayer(playerId).playerName;
 
             if (playerId === self.me.playerId) {
-                message = `Hai ucciso [b]${enemyString}[/b].`;
+                self.addToLog(`Hai ucciso [b]${enemyString}[/b].`);
             } else {
-                message = `${playerId} ha ucciso [b]${enemyString}[/b].`;
+                self.addToLog(`${playerName} ha ucciso [b]${enemyString}[/b].`);
             }
 
             if (isExactKill) {
-                message += ' Uccisione perfetta!';
+                self.addToLog(' [color=yellow]Uccisione perfetta![/color]');
             }
 
             if (playerId === self.me.playerId) {
-                message += ' Gioca ancora.';
+                self.addToLog('[color=green]Gioca ancora.[/color]');
             }
-
-            self.addToLog(message);
         });        
 
         /** END SOCKET CODE */
@@ -389,7 +418,7 @@ export default class Game extends Phaser.Scene {
         this.socket.off('nextPlayer');
         this.socket.off('cardPlayed');
         this.socket.off('cardDraw');
-        this.socket.off('cardDiscarded');
+        this.socket.off('cardsDiscarded');
         this.socket.off('gameOver');
         this.socket.off('enemyKilled');        
         
@@ -419,10 +448,15 @@ export default class Game extends Phaser.Scene {
     }
 
     addToLog(text) {
-        const MaxLines = 3;
+        const MaxLines = 4;
         if (this.messageLog.length > MaxLines) {
             this.messageLog.shift();
         }
         this.messageLog.push(text);
+        console.log(`addToLog: ${text}`);
+    }
+
+    getPlayer(playerId) {
+        return this.players.find(x=>x.playerId===playerId);
     }
 }

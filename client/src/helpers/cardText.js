@@ -1,6 +1,6 @@
 function getCardSeed(cardId) {
     if (cardId >= 1 && cardId <= 13) {
-        return 'Picche';
+        return 'Fiori';
     }
     if (cardId >= 14 && cardId <= 26) {
         return 'Quadri';
@@ -9,7 +9,7 @@ function getCardSeed(cardId) {
         return 'Cuori';
     }
     if (cardId >= 40 && cardId <= 52) {
-        return 'Fiori';
+        return 'Picche';
     }
     return '???';
 }
@@ -24,18 +24,23 @@ function getCardKind(cardId) {
     }
 
     let value = cardId % 13;
+    const values = [
+        'Re',
+        'Asso',
+        'Due',
+        'Tre',
+        'Quattro',
+        'Cinque',
+        'Sei',
+        'Sette',
+        'Otto',
+        'Nove',
+        'Dieci',
+        'Jack',
+        'Regina',
+    ]
 
-    if (value == 0) {
-        return 'Re';
-    }
-    if (value == 12) {
-        return 'Regina';
-    }
-    if (value == 11) {
-        return 'Jack';
-    }
-
-    return value.toString();
+    return values[value];
 }
 
 export function getCardString(cardId) {
